@@ -13,34 +13,16 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         foreach (PermissionName::cases() as $permissionName) {
-            Permission::firstOrCreate([
-                'name' => $permissionName->value,
-                'guard_name' => 'web',
-            ]);
+            Permission::findOrCreate($permissionName->value, 'web');
         }
 
-        $adminRole = Role::firstOrCreate([
-            'name' => RoleName::Admin->value,
-            'guard_name' => 'web',
-        ]);
-
-        $landlordRole = Role::firstOrCreate([
-            'name' => RoleName::Landlord->value,
-            'guard_name' => 'web',
-        ]);
-
-        $tenantRole = Role::firstOrCreate([
-            'name' => RoleName::Tenant->value,
-            'guard_name' => 'web',
-        ]);
-
-        $userRole = Role::firstOrCreate([
-            'name' => RoleName::User->value,
-            'guard_name' => 'web',
-        ]);
+        $adminRole = Role::findOrCreate(RoleName::Admin->value, 'web');
+        $landlordRole = Role::findOrCreate(RoleName::Landlord->value, 'web');
+        $tenantRole = Role::findOrCreate(RoleName::Tenant->value, 'web');
+        $userRole = Role::findOrCreate(RoleName::User->value, 'web');
 
         $adminRole->syncPermissions(PermissionName::values());
 
@@ -69,6 +51,6 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionName::DocumentsViewOwn->value,
         ]);
 
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

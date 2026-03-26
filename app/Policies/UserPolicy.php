@@ -10,7 +10,10 @@ class UserPolicy
 {
     public function before(User $authUser, string $ability): bool|null
     {
-        if ($authUser->hasRole(RoleName::Admin->value)) {
+        if (
+            $authUser->hasRole(RoleName::Admin->value)
+            && $ability !== 'assignRoles'
+        ) {
             return true;
         }
 
@@ -42,6 +45,7 @@ class UserPolicy
 
     public function assignRoles(User $authUser, User $user): bool
     {
-        return $authUser->can(PermissionName::UsersAssignRoles->value);
+        return $authUser->id !== $user->id
+            && $authUser->can(PermissionName::UsersAssignRoles->value);
     }
 }

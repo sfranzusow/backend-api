@@ -1,0 +1,25 @@
+### Ping
+GET http://127.0.0.1:8000/api/ping
+Accept: application/json
+
+### Login admin
+POST http://127.0.0.1:8000/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
+
+@token = 10|QgJVDkGbxOOeWfYZUPg0Wf4rZJCmu3IHGDPvi2FO59344217
+
+### Aktueller User
+GET http://127.0.0.1:8000/api/user
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Alle User
+GET http://127.0.0.1:8000/api/users
+Accept: application/json
+Authorization: Bearer {{token}}
