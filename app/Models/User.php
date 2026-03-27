@@ -35,4 +35,18 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function scopeFilter($query, array $filters): void
+    {
+        $query
+            ->when($filters['name'] ?? null, function ($query, $name) {
+                $query->where('name', 'like', '%' . $name . '%');
+            })
+            ->when($filters['email'] ?? null, function ($query, $email) {
+                $query->where('email', 'like', '%' . $email . '%');
+            })
+            ->when($filters['role'] ?? null, function ($query, $role) {
+                $query->whereHas('roles', fn ($q) => $q->where('name', $role));
+            });
+    }
 }
