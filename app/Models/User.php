@@ -9,7 +9,10 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -36,9 +39,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function scopeFilter($query, array $filters): void
+    public function scopeFilter($query, array $filters): Builder
     {
-        $query
+        return $query
             ->when($filters['name'] ?? null, function ($query, $name) {
                 $query->where('name', 'like', '%' . $name . '%');
             })
@@ -48,5 +51,46 @@ class User extends Authenticatable
             ->when($filters['role'] ?? null, function ($query, $role) {
                 $query->whereHas('roles', fn ($q) => $q->where('name', $role));
             });
+    }
+
+    public function properties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class)
+            ->withPivot(['role', 'start_date', 'end_date'])
+            ->withTimestamps();
+    }
+
+    public function landlordProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class)
+            ->wherePivot('role', 'landlord')
+            ->withPivot(['role', 'start_date', 'end_date'])
+            ->withTimestamps();
+    }
+
+    public function tenantProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class)
+            ->wherePivot('role', 'tenant')
+            ->withPivot(['role', 'start_date', 'end_date'])
+            ->withTimestamps();
+    }
+
+    public function managedProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class)
+            ->wherePivot('role', 'manager')
+            ->withPivot(['role', 'start_date', 'end_date'])
+            ->withTimestamps();
+    }
+
+    public function landlordRentalAgreements(): HasMany
+    {
+        return $this->hasMany(RentalAgreement::class, 'landlord_id');
+    }
+
+    public function tenantRentalAgreements(): HasMany
+    {
+        return $this->hasMany(RentalAgreement::class, 'tenant_id');
     }
 }
