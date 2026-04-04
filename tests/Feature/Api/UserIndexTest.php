@@ -1,49 +1,59 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+namespace Tests\Feature\Api;
+
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+class UserIndexTest extends TestCase
+{
+    use RefreshDatabase;
 
-beforeEach(function () {
-    app(PermissionRegistrar::class)->forgetCachedPermissions();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-    Permission::findOrCreate(PermissionName::UsersViewAny->value, 'web');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-    $adminRole = Role::findOrCreate(RoleName::Admin->value, 'web');
-    Role::findOrCreate(RoleName::User->value, 'web');
+        Permission::findOrCreate(PermissionName::UsersViewAny->value, 'web');
 
-    $adminRole->givePermissionTo(PermissionName::UsersViewAny->value);
-});
+        $adminRole = Role::findOrCreate(RoleName::Admin->value, 'web');
+        Role::findOrCreate(RoleName::User->value, 'web');
 
-it('returns 401 for guests when listing users', function () {
-    /** @var \Tests\TestCase $this */ 
-    $this->getJson('/api/users')
-        ->assertUnauthorized();
-});
+        $adminRole->givePermissionTo(PermissionName::UsersViewAny->value);
+    }
 
-it('allows admin to list users', function () {
-    $admin = User::factory()->create();
-    $admin->assignRole(RoleName::Admin->value);
+    public function test_returns_401_for_guests_when_listing_users(): void
+    {
+        $this->getJson('/api/users')->assertUnauthorized();
+    }
 
-    User::factory()->count(2)->create();   
-    /** @var \Tests\TestCase $this */  
-    $this->actingAs($admin, 'sanctum')
-        ->getJson('/api/users')
-        ->assertOk()
-        ->assertJsonCount(3, 'data');
-});
+    public function test_allows_admin_to_list_users(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(RoleName::Admin->value);
 
-it('forbids normal user from listing users', function () {
-    $user = User::factory()->create();
-    $user->assignRole(RoleName::User->value);
-    /** @var \Tests\TestCase $this */ 
-    $this->actingAs($user, 'sanctum')
-        ->getJson('/api/users')
-        ->assertForbidden();
-});
+        User::factory()->count(2)->create();
+
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/users');
+
+        $response->assertOk()
+            ->assertJsonCount(3, 'data');
+    }
+
+    public function test_forbids_normal_user_from_listing_users(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::User->value);
+
+        $response = $this->actingAs($user, 'sanctum')->getJson('/api/users');
+
+        $response->assertForbidden();
+    }
+}
