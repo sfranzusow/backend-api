@@ -6,7 +6,9 @@ enum PermissionName: string
 {
     case UsersViewAny = 'users.viewAny';
     case UsersView = 'users.view';
+    case UsersCreate = 'users.create';
     case UsersUpdate = 'users.update';
+    case UsersDelete = 'users.delete';
     case UsersAssignRoles = 'users.assignRoles';
 
     case ProfileViewOwn = 'profile.viewOwn';

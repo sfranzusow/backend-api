@@ -8,11 +8,11 @@ use App\Models\User;
 
 class UserPolicy
 {
-    public function before(User $authUser, string $ability): bool|null
+    public function before(User $authUser, string $ability): ?bool
     {
         if (
             $authUser->hasRole(RoleName::Admin->value)
-            && $ability !== 'assignRoles'
+            && ! in_array($ability, ['assignRoles', 'delete'], true)
         ) {
             return true;
         }
@@ -23,6 +23,11 @@ class UserPolicy
     public function viewAny(User $authUser): bool
     {
         return $authUser->can(PermissionName::UsersViewAny->value);
+    }
+
+    public function create(User $authUser): bool
+    {
+        return $authUser->can(PermissionName::UsersCreate->value);
     }
 
     public function view(User $authUser, User $user): bool
@@ -47,5 +52,18 @@ class UserPolicy
     {
         return $authUser->id !== $user->id
             && $authUser->can(PermissionName::UsersAssignRoles->value);
+    }
+
+    public function delete(User $authUser, User $user): bool
+    {
+        if ($authUser->id === $user->id) {
+            return false;
+        }
+
+        if ($authUser->hasRole(RoleName::Admin->value)) {
+            return true;
+        }
+
+        return $authUser->can(PermissionName::UsersDelete->value);
     }
 }
