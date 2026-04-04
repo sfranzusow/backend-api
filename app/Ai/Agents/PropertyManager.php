@@ -27,18 +27,4 @@ class PropertyManager implements Agent, Conversational, HasTools
      *
      * @return Message[]
      */
-    public function messages(): iterable
-    {
-        return [];
-    }
-
-    /**
-     * Get the tools available to the agent.
-     *
-     * @return Tool[]
-     */
-    public function tools(): iterable
-    {
-        return [];
-    }
-}
+    
