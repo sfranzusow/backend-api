@@ -4,6 +4,7 @@ use App\Enums\RoleName;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -91,6 +92,50 @@ it('allows user to update own profile', function () {
         ])
         ->assertSuccessful()
         ->assertJsonPath('data.name', 'Ich Neu');
+});
+
+it('allows user to change own password with current password', function () {
+    $user = User::factory()->create();
+    $user->assignRole(RoleName::User->value);
+
+    $this->actingAs($user, 'sanctum')
+        ->putJson('/api/users/'.$user->id, [
+            'password' => 'newpass11',
+            'password_confirmation' => 'newpass11',
+            'current_password' => 'password',
+        ])
+        ->assertSuccessful();
+
+    expect(Hash::check('newpass11', $user->fresh()->password))->toBeTrue();
+});
+
+it('rejects own password change without current password', function () {
+    $user = User::factory()->create();
+    $user->assignRole(RoleName::User->value);
+
+    $this->actingAs($user, 'sanctum')
+        ->putJson('/api/users/'.$user->id, [
+            'password' => 'newpass11',
+            'password_confirmation' => 'newpass11',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['current_password']);
+});
+
+it('allows admin to set another users password without current password', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(RoleName::Admin->value);
+
+    $target = User::factory()->create();
+
+    $this->actingAs($admin, 'sanctum')
+        ->putJson('/api/users/'.$target->id, [
+            'password' => 'adminset12',
+            'password_confirmation' => 'adminset12',
+        ])
+        ->assertSuccessful();
+
+    expect(Hash::check('adminset12', $target->fresh()->password))->toBeTrue();
 });
 
 it('prevents deleting own account', function () {

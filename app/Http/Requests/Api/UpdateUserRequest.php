@@ -41,6 +41,12 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
+            'current_password' => [
+                Rule::excludeUnless(fn () => $this->user()->is($user) && $this->filled('password')),
+                'required',
+                'string',
+                'current_password:sanctum',
+            ],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];
