@@ -50,8 +50,15 @@ class UserPolicy
 
     public function assignRoles(User $authUser, User $user): bool
     {
-        return $authUser->id !== $user->id
-            && $authUser->can(PermissionName::UsersAssignRoles->value);
+        if ($authUser->id === $user->id) {
+            return false;
+        }
+
+        if ($authUser->hasRole(RoleName::Admin->value)) {
+            return true;
+        }
+
+        return $authUser->can(PermissionName::UsersAssignRoles->value);
     }
 
     public function delete(User $authUser, User $user): bool

@@ -82,6 +82,35 @@ it('allows admin to update a user', function () {
     expect($target->fresh()->name)->toBe('Neu');
 });
 
+it('allows admin to change another users roles', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(RoleName::Admin->value);
+
+    $target = User::factory()->create();
+    $target->assignRole(RoleName::User->value);
+
+    $this->actingAs($admin, 'sanctum')
+        ->patchJson('/api/users/'.$target->id, [
+            'roles' => [RoleName::Tenant->value],
+        ])
+        ->assertSuccessful()
+        ->assertJsonPath('data.roles', [RoleName::Tenant->value]);
+
+    expect($target->fresh()->hasRole(RoleName::Tenant->value))->toBeTrue()
+        ->and($target->fresh()->hasRole(RoleName::User->value))->toBeFalse();
+});
+
+it('forbids changing own roles via API', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole(RoleName::Admin->value);
+
+    $this->actingAs($admin, 'sanctum')
+        ->patchJson('/api/users/'.$admin->id, [
+            'roles' => [RoleName::User->value],
+        ])
+        ->assertForbidden();
+});
+
 it('allows user to update own profile', function () {
     $user = User::factory()->create(['name' => 'Ich']);
     $user->assignRole(RoleName::User->value);
