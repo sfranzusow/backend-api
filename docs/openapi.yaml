@@ -96,6 +96,9 @@ paths:
     get:
       tags: [Users]
       summary: Aktuell authentifizierter Benutzer (Profil)
+      description: |
+        Lädt die `roles`-Relation; im JSON ist `data.roles` daher **immer** ein Array
+        (Rollennamen als Strings, ggf. leer).
       security:
         - sanctumBearer: []
       responses:
@@ -306,7 +309,7 @@ components:
       in: query
       schema:
         type: string
-      description: Rollenname (Spalte `roles.name`, z. B. admin, user)
+      description: Rollenname (`roles.name`, z. B. admin, user, landlord, tenant)
     PerPage:
       name: per_page
       in: query
@@ -383,7 +386,10 @@ components:
 
     User:
       type: object
-      description: UserResource; `roles` nur wenn Relation geladen
+      description: |
+        UserResource. Feld `roles` erscheint, wenn die Relation geladen ist
+        (`GET /user`, `GET/PUT/PATCH` einzelner User, Listeneinträge). Beim **Login**
+        (`user` in LoginResponse) wird `roles` nicht geladen und fehlt im JSON.
       required: [id, name, email, created_at, updated_at]
       properties:
         id:
@@ -407,6 +413,10 @@ components:
 
     StoreUserRequest:
       type: object
+      description: |
+        Ohne Feld `roles` weist das Backend automatisch die Rolle `user` zu.
+        Mit `roles` werden die angegebenen Spatie-Rollennamen gesetzt (`syncRoles`);
+        dafür ist die Berechtigung `assignRoles` nötig.
       required: [name, email, password, password_confirmation]
       properties:
         name:
@@ -433,6 +443,8 @@ components:
         Alle Felder optional. Bei **Passwortänderung für den eigenen Account** zusätzlich
         `current_password` (aktuelles Passwort) mitsenden. Admins können fremde Passwörter
         ohne `current_password` setzen.
+        Feld `roles` setzt Rollen per `syncRoles` (leeres Array entfernt alle Rollen);
+        nur mit Berechtigung `assignRoles`, eigene Rollen nicht per API änderbar.
       properties:
         name:
           type: string
