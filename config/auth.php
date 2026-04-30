@@ -114,4 +114,19 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login Rate Limit
+    |--------------------------------------------------------------------------
+    |
+    | Configure throttling for API login attempts.
+    | You can override these values via .env.
+    |
+    */
+
+    'login_rate_limit' => [
+        'max_attempts' => env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+        'decay_minutes' => env('AUTH_LOGIN_DECAY_MINUTES', 1),
+    ],
+
 ];

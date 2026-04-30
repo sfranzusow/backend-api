@@ -24,6 +24,9 @@ tags:
   - name: Health
   - name: Auth
   - name: Users
+  - name: Addresses
+  - name: Properties
+  - name: RentalAgreements
 
 paths:
   /ping:
@@ -47,6 +50,10 @@ paths:
     post:
       tags: [Auth]
       summary: Login (Sanctum-Token ausstellen)
+      description: |
+        Rate-limited via `throttle:login`.
+        Die Limits sind konfigurierbar über:
+        `AUTH_LOGIN_MAX_ATTEMPTS` und `AUTH_LOGIN_DECAY_MINUTES`.
       requestBody:
         required: true
         content:
@@ -65,11 +72,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InvalidCredentialsError'
               examples:
                 badCredentials:
                   value:
                     message: Die Anmeldedaten sind ungültig.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /logout:
     post:
@@ -284,6 +295,569 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /addresses:
+    get:
+      tags: [Addresses]
+      summary: Adressliste (paginiert)
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/AddressCity'
+        - $ref: '#/components/parameters/AddressCountry'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [Addresses]
+      summary: Adresse anlegen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreAddressRequest'
+      responses:
+        '201':
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /addresses/{address}:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Addresses]
+      summary: Adresse anzeigen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Addresses]
+      summary: Adresse aktualisieren
+      description: |
+        Entspricht derselben Update-Logik wie `PATCH /addresses/{address}`.
+        Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAddressRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [Addresses]
+      summary: Adresse aktualisieren
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAddressRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Addresses]
+      summary: Adresse löschen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /properties:
+    get:
+      tags: [Properties]
+      summary: Objektliste (paginiert)
+      description: |
+        Nur für Benutzer mit Zugriff auf Objektfunktionen.
+        Aktuell erlaubt für `admin`, `landlord` und `tenant`.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/PropertyStatus'
+        - $ref: '#/components/parameters/PropertyType'
+        - $ref: '#/components/parameters/PropertyAddressId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [Properties]
+      summary: Objekt anlegen
+      description: |
+        Aktuell nur für `admin` oder `landlord`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorePropertyRequest'
+      responses:
+        '201':
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Property'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /properties/{property}:
+    parameters:
+      - name: property
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Properties]
+      summary: Objekt anzeigen
+      description: |
+        `admin` darf jedes Objekt sehen.
+        `landlord` und `tenant` nur Objekte, bei denen sie über `property_user`
+        passend zugeordnet sind.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Property'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Properties]
+      summary: Objekt aktualisieren
+      description: |
+        Entspricht derselben Update-Logik wie `PATCH /properties/{property}`.
+        Aktuell nur für `admin` oder den als `landlord` zugeordneten
+        Objektbesitzer.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePropertyRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Property'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [Properties]
+      summary: Objekt aktualisieren
+      description: |
+        Aktuell nur für `admin` oder den als `landlord` zugeordneten
+        Objektbesitzer.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePropertyRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Property'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Properties]
+      summary: Objekt löschen
+      description: |
+        Aktuell nur für `admin` oder den als `landlord` zugeordneten
+        Objektbesitzer.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /properties/{property}/members:
+    put:
+      tags: [Properties]
+      summary: Property-Mitglieder inkl. Rolle synchronisieren
+      description: |
+        Aktuell nur für `admin` oder den als `landlord` zugeordneten
+        Objektbesitzer.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPropertyMembersRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Property'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /rental-agreements:
+    get:
+      tags: [RentalAgreements]
+      summary: Mietvertragsliste (paginiert)
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/RentalAgreementStatus'
+        - $ref: '#/components/parameters/RentalAgreementPropertyId'
+        - $ref: '#/components/parameters/RentalAgreementLandlordId'
+        - $ref: '#/components/parameters/RentalAgreementTenantId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalAgreementPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [RentalAgreements]
+      summary: Mietvertrag anlegen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreRentalAgreementRequest'
+      responses:
+        '201':
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentalAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /rental-agreements/{rentalAgreement}:
+    parameters:
+      - name: rentalAgreement
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [RentalAgreements]
+      summary: Mietvertrag anzeigen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentalAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [RentalAgreements]
+      summary: Mietvertrag aktualisieren
+      description: |
+        Entspricht derselben Update-Logik wie `PATCH /rental-agreements/{rentalAgreement}`.
+        Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRentalAgreementRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentalAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [RentalAgreements]
+      summary: Mietvertrag aktualisieren
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRentalAgreementRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RentalAgreement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [RentalAgreements]
+      summary: Mietvertrag löschen
+      description: Für jeden authentifizierten Benutzer verfügbar.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     sanctumBearer:
@@ -332,6 +906,59 @@ components:
         type: string
         enum: [asc, desc]
         default: asc
+    AddressCity:
+      name: city
+      in: query
+      schema:
+        type: string
+        maxLength: 255
+      description: Teilstring-Filter auf `addresses.city` (LIKE)
+    AddressCountry:
+      name: country
+      in: query
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 2
+      description: ISO-2-Ländercode; im Backend zu Uppercase normalisiert
+    PropertyStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [available, rented, sold]
+    PropertyType:
+      name: type
+      in: query
+      schema:
+        type: string
+        enum: [apartment, office, penthouse, studio]
+    PropertyAddressId:
+      name: address_id
+      in: query
+      schema:
+        type: integer
+    RentalAgreementStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, active, terminated, ended]
+    RentalAgreementPropertyId:
+      name: property_id
+      in: query
+      schema:
+        type: integer
+    RentalAgreementLandlordId:
+      name: landlord_id
+      in: query
+      schema:
+        type: integer
+    RentalAgreementTenantId:
+      name: tenant_id
+      in: query
+      schema:
+        type: integer
 
   responses:
     Unauthorized:
@@ -340,6 +967,16 @@ components:
       description: Authentifiziert, aber keine Berechtigung
     NotFound:
       description: Ressource nicht gefunden
+    TooManyRequests:
+      description: Zu viele Anfragen in kurzer Zeit (Rate Limit)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TooManyRequestsError'
+          examples:
+            throttledLogin:
+              value:
+                message: Too many attempts. Please try again in 60 seconds.
 
   schemas:
     LoginRequest:
@@ -364,6 +1001,14 @@ components:
           description: Plain-Text-Token für Authorization-Header
         user:
           $ref: '#/components/schemas/UserWithoutRoles'
+
+    InvalidCredentialsError:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: Die Anmeldedaten sind ungültig.
 
     UserWithoutRoles:
       type: object
@@ -482,6 +1127,436 @@ components:
           type: object
           additionalProperties: true
 
+    Address:
+      type: object
+      required: [id, street, house_number, zip_code, city, country, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        street:
+          type: string
+        house_number:
+          type: string
+        zip_code:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+          default: DE
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StoreAddressRequest:
+      type: object
+      required: [street, house_number, zip_code, city]
+      properties:
+        street:
+          type: string
+          maxLength: 255
+        house_number:
+          type: string
+          maxLength: 20
+        zip_code:
+          type: string
+          maxLength: 20
+        city:
+          type: string
+          maxLength: 255
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+
+    UpdateAddressRequest:
+      type: object
+      properties:
+        street:
+          type: string
+          maxLength: 255
+        house_number:
+          type: string
+          maxLength: 20
+        zip_code:
+          type: string
+          maxLength: 20
+        city:
+          type: string
+          maxLength: 255
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+        latitude:
+          type: number
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          nullable: true
+          minimum: -180
+          maximum: 180
+
+    AddressPaginator:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+    Property:
+      type: object
+      required: [id, address_id, type, area_living, rooms, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        address_id:
+          type: integer
+        unit_number:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [apartment, office, penthouse, studio]
+        status:
+          type: string
+          enum: [available, rented, sold]
+          default: available
+        area_living:
+          type: string
+        rooms:
+          type: integer
+        floor:
+          type: integer
+          nullable: true
+        build_year:
+          type: integer
+          nullable: true
+        energy_class:
+          type: string
+          nullable: true
+        price:
+          type: string
+          nullable: true
+        features:
+          type: array
+          nullable: true
+          items:
+            type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        members:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PropertyMember'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StorePropertyRequest:
+      type: object
+      required: [address_id, type, area_living, rooms]
+      properties:
+        address_id:
+          type: integer
+        unit_number:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          enum: [apartment, office, penthouse, studio]
+        area_living:
+          type: number
+        rooms:
+          type: integer
+        floor:
+          type: integer
+        build_year:
+          type: integer
+          minimum: 1800
+        energy_class:
+          type: string
+          maxLength: 3
+        price:
+          type: number
+        features:
+          type: array
+          nullable: true
+          items:
+            type: string
+        status:
+          type: string
+          enum: [available, rented, sold]
+
+    UpdatePropertyRequest:
+      type: object
+      properties:
+        address_id:
+          type: integer
+        unit_number:
+          type: string
+          nullable: true
+          maxLength: 255
+        type:
+          type: string
+          enum: [apartment, office, penthouse, studio]
+        area_living:
+          type: number
+        rooms:
+          type: integer
+        floor:
+          type: integer
+        build_year:
+          type: integer
+          nullable: true
+          minimum: 1800
+        energy_class:
+          type: string
+          nullable: true
+          maxLength: 3
+        price:
+          type: number
+          nullable: true
+        features:
+          type: array
+          nullable: true
+          items:
+            type: string
+        status:
+          type: string
+          enum: [available, rented, sold]
+
+    PropertyMember:
+      type: object
+      required: [user, role, start_date, end_date]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserWithoutRoles'
+        role:
+          type: string
+          enum: [landlord, tenant, manager]
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+
+    SyncPropertyMembersRequest:
+      type: object
+      required: [members]
+      properties:
+        members:
+          type: array
+          items:
+            type: object
+            required: [user_id, role]
+            properties:
+              user_id:
+                type: integer
+              role:
+                type: string
+                enum: [landlord, tenant, manager]
+              start_date:
+                type: string
+                format: date
+                nullable: true
+              end_date:
+                type: string
+                format: date
+                nullable: true
+
+    PropertyPaginator:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Property'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+    RentalAgreement:
+      type: object
+      required: [id, property_id, landlord_id, tenant_id, date_from, rent_cold, currency, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        property_id:
+          type: integer
+        landlord_id:
+          type: integer
+        tenant_id:
+          type: integer
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+          nullable: true
+        rent_cold:
+          type: string
+        rent_warm:
+          type: string
+          nullable: true
+        service_charges:
+          type: string
+          nullable: true
+        deposit:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          default: EUR
+        status:
+          type: string
+          enum: [draft, active, terminated, ended]
+          default: draft
+        notes:
+          type: string
+          nullable: true
+        property:
+          $ref: '#/components/schemas/Property'
+        landlord:
+          $ref: '#/components/schemas/UserWithoutRoles'
+        tenant:
+          $ref: '#/components/schemas/UserWithoutRoles'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StoreRentalAgreementRequest:
+      type: object
+      required: [property_id, landlord_id, tenant_id, date_from, rent_cold]
+      properties:
+        property_id:
+          type: integer
+        landlord_id:
+          type: integer
+        tenant_id:
+          type: integer
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+          nullable: true
+        rent_cold:
+          type: number
+        rent_warm:
+          type: number
+          nullable: true
+        service_charges:
+          type: number
+          nullable: true
+        deposit:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        status:
+          type: string
+          enum: [draft, active, terminated, ended]
+        notes:
+          type: string
+
+    UpdateRentalAgreementRequest:
+      type: object
+      properties:
+        property_id:
+          type: integer
+        landlord_id:
+          type: integer
+        tenant_id:
+          type: integer
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+          nullable: true
+        rent_cold:
+          type: number
+        rent_warm:
+          type: number
+          nullable: true
+        service_charges:
+          type: number
+          nullable: true
+        deposit:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        status:
+          type: string
+          enum: [draft, active, terminated, ended]
+        notes:
+          type: string
+
+    RentalAgreementPaginator:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentalAgreement'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
     ValidationError:
       type: object
       description: Laravel Validierungsfehler (422)
@@ -494,3 +1569,12 @@ components:
             type: array
             items:
               type: string
+
+    TooManyRequestsError:
+      type: object
+      description: Standard Laravel Throttle-Fehler (429)
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: Too many attempts. Please try again in 60 seconds.
