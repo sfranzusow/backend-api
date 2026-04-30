@@ -16,6 +16,8 @@ class RentalAgreementController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', RentalAgreement::class);
+
         $validated = $request->validate([
             'status' => ['nullable', Rule::in(['draft', 'active', 'terminated', 'ended'])],
             'property_id' => ['nullable', 'integer', Rule::exists('properties', 'id')],
@@ -25,9 +27,17 @@ class RentalAgreementController extends Controller
         ]);
 
         $perPage = $validated['per_page'] ?? 15;
+        $authUser = $request->user();
 
         $agreements = RentalAgreement::query()
             ->with(['property.address', 'landlord:id,name,email', 'tenant:id,name,email'])
+            ->when(! $authUser->hasRole('admin'), function ($query) use ($authUser) {
+                if ($authUser->hasRole('landlord')) {
+                    $query->where('landlord_id', $authUser->id);
+                } elseif ($authUser->hasRole('tenant')) {
+                    $query->where('tenant_id', $authUser->id);
+                }
+            })
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($validated['property_id'] ?? null, fn ($query, $propertyId) => $query->where('property_id', $propertyId))
             ->when($validated['landlord_id'] ?? null, fn ($query, $landlordId) => $query->where('landlord_id', $landlordId))
@@ -51,6 +61,8 @@ class RentalAgreementController extends Controller
 
     public function show(RentalAgreement $rentalAgreement): JsonResponse
     {
+        $this->authorize('view', $rentalAgreement);
+
         $rentalAgreement->loadMissing(['property.address', 'landlord:id,name,email', 'tenant:id,name,email']);
 
         return response()->json([
@@ -71,6 +83,8 @@ class RentalAgreementController extends Controller
 
     public function destroy(RentalAgreement $rentalAgreement): Response
     {
+        $this->authorize('delete', $rentalAgreement);
+
         $rentalAgreement->delete();
 
         return response()->noContent();

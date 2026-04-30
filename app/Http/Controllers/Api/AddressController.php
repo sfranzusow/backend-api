@@ -15,6 +15,8 @@ class AddressController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Address::class);
+
         $validated = $request->validate([
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -22,8 +24,16 @@ class AddressController extends Controller
         ]);
 
         $perPage = $validated['per_page'] ?? 15;
+        $authUser = $request->user();
 
         $addresses = Address::query()
+            ->when(! $authUser->hasRole('admin'), function ($query) use ($authUser) {
+                $query->whereHas('properties.users', function ($relationQuery) use ($authUser) {
+                    $relationQuery
+                        ->where('users.id', $authUser->id)
+                        ->where('property_user.role', 'landlord');
+                });
+            })
             ->when($validated['city'] ?? null, fn ($query, $city) => $query->where('city', 'like', '%'.$city.'%'))
             ->when($validated['country'] ?? null, fn ($query, $country) => $query->where('country', strtoupper($country)))
             ->latest('id')
@@ -44,6 +54,8 @@ class AddressController extends Controller
 
     public function show(Address $address): JsonResponse
     {
+        $this->authorize('view', $address);
+
         return response()->json([
             'data' => new AddressResource($address),
         ]);
@@ -61,6 +73,8 @@ class AddressController extends Controller
 
     public function destroy(Address $address): Response
     {
+        $this->authorize('delete', $address);
+
         $address->delete();
 
         return response()->noContent();

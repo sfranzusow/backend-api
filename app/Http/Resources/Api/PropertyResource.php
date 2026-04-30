@@ -14,6 +14,11 @@ class PropertyResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $address = $this->whenLoaded('address');
+        $canViewAddress = $address !== null
+            && $address !== false
+            && $request->user()?->can('view', $address);
+
         return [
             'id' => $this->id,
             'address_id' => $this->address_id,
@@ -27,7 +32,7 @@ class PropertyResource extends JsonResource
             'price' => $this->price,
             'features' => $this->features,
             'status' => $this->status,
-            'address' => AddressResource::make($this->whenLoaded('address')),
+            'address' => $this->when($canViewAddress, fn () => AddressResource::make($address)),
             'members' => $this->whenLoaded('users', function () {
                 return $this->users->map(fn ($user) => [
                     'user' => UserResource::make($user),

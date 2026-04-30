@@ -117,6 +117,19 @@ class PropertyApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_tenant_can_view_property_without_address_data(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $property = Property::factory()->create();
+        $property->users()->attach($user->id, ['role' => RoleName::Tenant->value]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/properties/'.$property->id)
+            ->assertSuccessful()
+            ->assertJsonMissingPath('data.address');
+    }
+
     public function test_landlord_of_property_can_update_property_via_put(): void
     {
         $user = User::factory()->create();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Models\RentalAgreement;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,7 +11,10 @@ class UpdateRentalAgreementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var RentalAgreement $rentalAgreement */
+        $rentalAgreement = $this->route('rental_agreement');
+
+        return $this->user()->can('update', $rentalAgreement);
     }
 
     /**

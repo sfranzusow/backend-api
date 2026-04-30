@@ -299,7 +299,11 @@ paths:
     get:
       tags: [Addresses]
       summary: Adressliste (paginiert)
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        `admin` sieht alle Adressen.
+        `landlord` sieht nur Adressen von Objekten, bei denen er als `landlord`
+        zugeordnet ist.
+        `tenant` und `user` haben keinen Zugriff.
       security:
         - sanctumBearer: []
       parameters:
@@ -315,6 +319,8 @@ paths:
                 $ref: '#/components/schemas/AddressPaginator'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           description: Validierungsfehler
           content:
@@ -324,7 +330,8 @@ paths:
     post:
       tags: [Addresses]
       summary: Adresse anlegen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder `landlord`.
       security:
         - sanctumBearer: []
       requestBody:
@@ -346,6 +353,8 @@ paths:
                     $ref: '#/components/schemas/Address'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           description: Validierungsfehler
           content:
@@ -363,7 +372,10 @@ paths:
     get:
       tags: [Addresses]
       summary: Adresse anzeigen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        `admin` darf jede Adresse sehen.
+        `landlord` nur Adressen eigener Objekte.
+        `tenant` und `user` haben keinen Zugriff.
       security:
         - sanctumBearer: []
       responses:
@@ -379,6 +391,8 @@ paths:
                     $ref: '#/components/schemas/Address'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     put:
@@ -386,7 +400,7 @@ paths:
       summary: Adresse aktualisieren
       description: |
         Entspricht derselben Update-Logik wie `PATCH /addresses/{address}`.
-        Für jeden authentifizierten Benutzer verfügbar.
+        Nur für `admin` oder `landlord` bei eigenen Objekt-Adressen.
       security:
         - sanctumBearer: []
       requestBody:
@@ -407,6 +421,8 @@ paths:
                     $ref: '#/components/schemas/Address'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -418,7 +434,8 @@ paths:
     patch:
       tags: [Addresses]
       summary: Adresse aktualisieren
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder `landlord` bei eigenen Objekt-Adressen.
       security:
         - sanctumBearer: []
       requestBody:
@@ -439,6 +456,8 @@ paths:
                     $ref: '#/components/schemas/Address'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -450,7 +469,8 @@ paths:
     delete:
       tags: [Addresses]
       summary: Adresse löschen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder `landlord` bei eigenen Objekt-Adressen.
       security:
         - sanctumBearer: []
       responses:
@@ -458,6 +478,8 @@ paths:
           description: Kein Inhalt
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -694,7 +716,11 @@ paths:
     get:
       tags: [RentalAgreements]
       summary: Mietvertragsliste (paginiert)
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        `admin` sieht alle Mietverträge.
+        `landlord` sieht nur Mietverträge, bei denen er `landlord_id` ist.
+        `tenant` sieht nur Mietverträge, bei denen er `tenant_id` ist.
+        `user` hat keinen Zugriff.
       security:
         - sanctumBearer: []
       parameters:
@@ -712,6 +738,8 @@ paths:
                 $ref: '#/components/schemas/RentalAgreementPaginator'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           description: Validierungsfehler
           content:
@@ -721,7 +749,8 @@ paths:
     post:
       tags: [RentalAgreements]
       summary: Mietvertrag anlegen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder `landlord`.
       security:
         - sanctumBearer: []
       requestBody:
@@ -743,6 +772,8 @@ paths:
                     $ref: '#/components/schemas/RentalAgreement'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           description: Validierungsfehler
           content:
@@ -760,7 +791,10 @@ paths:
     get:
       tags: [RentalAgreements]
       summary: Mietvertrag anzeigen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        `admin` darf jeden Mietvertrag sehen.
+        `landlord` nur eigene Mietverträge.
+        `tenant` nur eigene Mietverträge.
       security:
         - sanctumBearer: []
       responses:
@@ -776,6 +810,8 @@ paths:
                     $ref: '#/components/schemas/RentalAgreement'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     put:
@@ -783,7 +819,7 @@ paths:
       summary: Mietvertrag aktualisieren
       description: |
         Entspricht derselben Update-Logik wie `PATCH /rental-agreements/{rentalAgreement}`.
-        Für jeden authentifizierten Benutzer verfügbar.
+        Nur für `admin` oder den zugeordneten `landlord`.
       security:
         - sanctumBearer: []
       requestBody:
@@ -804,6 +840,8 @@ paths:
                     $ref: '#/components/schemas/RentalAgreement'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -815,7 +853,8 @@ paths:
     patch:
       tags: [RentalAgreements]
       summary: Mietvertrag aktualisieren
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder den zugeordneten `landlord`.
       security:
         - sanctumBearer: []
       requestBody:
@@ -836,6 +875,8 @@ paths:
                     $ref: '#/components/schemas/RentalAgreement'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -847,7 +888,8 @@ paths:
     delete:
       tags: [RentalAgreements]
       summary: Mietvertrag löschen
-      description: Für jeden authentifizierten Benutzer verfügbar.
+      description: |
+        Nur für `admin` oder den zugeordneten `landlord`.
       security:
         - sanctumBearer: []
       responses:
@@ -855,6 +897,8 @@ paths:
           description: Kein Inhalt
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1233,6 +1277,10 @@ components:
 
     Property:
       type: object
+      description: |
+        PropertyResource.
+        Das Feld `address` erscheint nur, wenn der aktuelle Benutzer die zugehörige
+        Adresse sehen darf.
       required: [id, address_id, type, area_living, rooms, status, created_at, updated_at]
       properties:
         id:

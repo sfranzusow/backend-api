@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Models\Address;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -9,7 +10,10 @@ class UpdateAddressRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Address $address */
+        $address = $this->route('address');
+
+        return $this->user()->can('update', $address);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\RoleName;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use App\Models\User;
@@ -22,8 +23,9 @@ class RentalAgreementApiTest extends TestCase
     public function test_authenticated_user_can_create_rental_agreement(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
         $property = Property::factory()->create();
-        $landlord = User::factory()->create();
+        $landlord = $user;
         $tenant = User::factory()->create();
 
         $this->actingAs($user, 'sanctum')->postJson('/api/rental-agreements', [
@@ -44,11 +46,12 @@ class RentalAgreementApiTest extends TestCase
         $this->getJson('/api/rental-agreements/'.$agreement->id)->assertUnauthorized();
     }
 
-    public function test_authenticated_user_can_filter_rental_agreements(): void
+    public function test_landlord_can_filter_own_rental_agreements(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
         $property = Property::factory()->create();
-        $landlord = User::factory()->create();
+        $landlord = $user;
         $tenant = User::factory()->create();
 
         $matchingAgreement = RentalAgreement::factory()->create([
@@ -60,6 +63,7 @@ class RentalAgreementApiTest extends TestCase
 
         RentalAgreement::factory()->create([
             'status' => 'draft',
+            'landlord_id' => User::factory(),
         ]);
 
         $this->actingAs($user, 'sanctum')
@@ -72,8 +76,9 @@ class RentalAgreementApiTest extends TestCase
     public function test_it_validates_different_landlord_and_tenant(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
         $property = Property::factory()->create();
-        $sameUser = User::factory()->create();
+        $sameUser = $user;
 
         $this->actingAs($user, 'sanctum')->postJson('/api/rental-agreements', [
             'property_id' => $property->id,
@@ -84,21 +89,27 @@ class RentalAgreementApiTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors(['landlord_id']);
     }
 
-    public function test_authenticated_user_can_show_rental_agreement(): void
+    public function test_tenant_can_show_own_rental_agreement_without_address_data(): void
     {
         $user = User::factory()->create();
-        $agreement = RentalAgreement::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/rental-agreements/'.$agreement->id)
             ->assertSuccessful()
-            ->assertJsonPath('data.id', $agreement->id);
+            ->assertJsonPath('data.id', $agreement->id)
+            ->assertJsonMissingPath('data.property.address');
     }
 
-    public function test_authenticated_user_can_update_rental_agreement_via_put(): void
+    public function test_landlord_can_update_own_rental_agreement_via_put(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
         $agreement = RentalAgreement::factory()->create([
+            'landlord_id' => $user->id,
             'status' => 'draft',
         ]);
 
@@ -112,15 +123,61 @@ class RentalAgreementApiTest extends TestCase
             ->assertJsonPath('data.notes', 'Signed');
     }
 
-    public function test_authenticated_user_can_delete_rental_agreement(): void
+    public function test_landlord_can_delete_own_rental_agreement(): void
     {
         $user = User::factory()->create();
-        $agreement = RentalAgreement::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $agreement = RentalAgreement::factory()->create([
+            'landlord_id' => $user->id,
+        ]);
 
         $this->actingAs($user, 'sanctum')
             ->deleteJson('/api/rental-agreements/'.$agreement->id)
             ->assertNoContent();
 
         $this->assertNull(RentalAgreement::query()->find($agreement->id));
+    }
+
+    public function test_user_role_cannot_access_rental_agreement_index(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::User->value);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements')
+            ->assertForbidden();
+    }
+
+    public function test_tenant_only_sees_own_rental_agreements_in_index(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+
+        $ownedAgreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+
+        RentalAgreement::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements')
+            ->assertSuccessful()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $ownedAgreement->id);
+    }
+
+    public function test_tenant_cannot_update_rental_agreement(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->putJson('/api/rental-agreements/'.$agreement->id, [
+                'notes' => 'Attempt',
+            ])
+            ->assertForbidden();
     }
 }
