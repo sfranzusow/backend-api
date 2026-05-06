@@ -12,17 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone_number', 50)->nullable()->after('email');
-            $table->string('address_street')->nullable()->after('phone_number');
-            $table->string('address_house_number', 20)->nullable()->after('address_street');
-            $table->string('address_zip_code', 20)->nullable()->after('address_house_number');
-            $table->string('address_city')->nullable()->after('address_zip_code');
-            $table->string('address_country', 2)->nullable()->after('address_city');
-            $table->foreignId('organization_id')
-                ->nullable()
-                ->after('address_country')
-                ->constrained()
-                ->nullOnDelete();
+            $table->after('email', function (Blueprint $table) {
+                $table->string('phone_number', 50)->nullable();
+                $table->string('address_street')->nullable();
+                $table->string('address_house_number', 20)->nullable();
+                $table->string('address_zip_code', 20)->nullable();
+                $table->string('address_city')->nullable();
+                $table->string('address_country', 2)->nullable();
+                $table->foreignId('organization_id')
+                    ->nullable()
+                    ->constrained('organizations')
+                    ->nullOnDelete();
+            });
         });
     }
 
