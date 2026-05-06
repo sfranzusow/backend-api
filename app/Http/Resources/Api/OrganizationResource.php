@@ -5,7 +5,7 @@ namespace App\Http\Resources\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class OrganizationResource extends JsonResource
 {
     public static $wrap = null;
 
@@ -19,21 +19,12 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'type' => $this->type,
             'email' => $this->email,
             'phone_number' => $this->phone_number,
-            'address_street' => $this->address_street,
-            'address_house_number' => $this->address_house_number,
-            'address_zip_code' => $this->address_zip_code,
-            'address_city' => $this->address_city,
-            'address_country' => $this->address_country,
-            'organization_id' => $this->organization_id,
-            'organization' => OrganizationResource::make($this->whenLoaded('organization')),
+            'website' => $this->website,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            'roles' => $this->whenLoaded(
-                'roles',
-                fn () => $this->roles->pluck('name')->values()->all(),
-            ),
         ];
     }
 }

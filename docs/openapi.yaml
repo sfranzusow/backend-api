@@ -135,6 +135,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/FilterName'
         - $ref: '#/components/parameters/FilterEmail'
+        - $ref: '#/components/parameters/FilterPhoneNumber'
+        - $ref: '#/components/parameters/FilterOrganizationId'
         - $ref: '#/components/parameters/FilterRole'
         - $ref: '#/components/parameters/PerPage'
         - $ref: '#/components/parameters/Sort'
@@ -922,6 +924,18 @@ components:
       in: query
       schema:
         type: string
+    FilterPhoneNumber:
+      name: phone_number
+      in: query
+      schema:
+        type: string
+      description: Teilstring-Filter auf Telefonnummer
+    FilterOrganizationId:
+      name: organization_id
+      in: query
+      schema:
+        type: integer
+      description: Filter auf Organisationszuordnung
     FilterRole:
       name: role
       in: query
@@ -1073,13 +1087,44 @@ components:
           type: string
           format: date-time
 
+    Organization:
+      type: object
+      required: [id, name, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          nullable: true
+          example: property_management
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     User:
       type: object
       description: |
-        UserResource. Feld `roles` erscheint, wenn die Relation geladen ist
+        UserResource. Feld `roles` erscheint, wenn die Relation geladen ist.
+        Feld `organization` erscheint, wenn die Relation geladen ist
         (`GET /user`, `GET/PUT/PATCH` einzelner User, Listeneinträge). Beim **Login**
-        (`user` in LoginResponse) wird `roles` nicht geladen und fehlt im JSON.
-      required: [id, name, email, created_at, updated_at]
+        (`user` in LoginResponse) werden Relationen nicht geladen und fehlen im JSON.
+      required: [id, name, email, phone_number, address_street, address_house_number, address_zip_code, address_city, address_country, organization_id, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -1088,6 +1133,33 @@ components:
         email:
           type: string
           format: email
+        phone_number:
+          type: string
+          nullable: true
+        address_street:
+          type: string
+          nullable: true
+        address_house_number:
+          type: string
+          nullable: true
+        address_zip_code:
+          type: string
+          nullable: true
+        address_city:
+          type: string
+          nullable: true
+        address_country:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        organization_id:
+          type: integer
+          nullable: true
+        organization:
+          allOf:
+            - $ref: '#/components/schemas/Organization'
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -1120,6 +1192,35 @@ components:
           minLength: 8
         password_confirmation:
           type: string
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        address_street:
+          type: string
+          nullable: true
+          maxLength: 255
+        address_house_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        address_zip_code:
+          type: string
+          nullable: true
+          maxLength: 20
+        address_city:
+          type: string
+          nullable: true
+          maxLength: 255
+        address_country:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        organization_id:
+          type: integer
+          nullable: true
+          description: Optional; existierende `organizations.id`
         roles:
           type: array
           items:
@@ -1134,6 +1235,8 @@ components:
         ohne `current_password` setzen.
         Feld `roles` setzt Rollen per `syncRoles` (leeres Array entfernt alle Rollen);
         nur mit Berechtigung `assignRoles`, eigene Rollen nicht per API änderbar.
+        Feld `organization_id` ist administrative User-Verwaltung und fuer reine
+        Profilupdates verboten.
       properties:
         name:
           type: string
@@ -1147,6 +1250,35 @@ components:
           minLength: 8
         password_confirmation:
           type: string
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        address_street:
+          type: string
+          nullable: true
+          maxLength: 255
+        address_house_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        address_zip_code:
+          type: string
+          nullable: true
+          maxLength: 20
+        address_city:
+          type: string
+          nullable: true
+          maxLength: 255
+        address_country:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        organization_id:
+          type: integer
+          nullable: true
+          description: Optional; existierende `organizations.id`; `null` entfernt die Zuordnung; nicht bei reinen Profilupdates erlaubt
         current_password:
           type: string
           description: Erforderlich wenn authentifizierter User sich selbst aktualisiert und `password` gesetzt ist

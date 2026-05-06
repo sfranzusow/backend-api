@@ -17,7 +17,7 @@ class UserController extends Controller
 {
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->loadMissing(['roles:id,name']);
+        $user = $request->user()->loadMissing(['organization:id,name,type,email,phone_number,website', 'roles:id,name']);
 
         return response()->json([
             'data' => new UserResource($user),
@@ -32,6 +32,8 @@ class UserController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'string', 'max:255'],
             'role' => ['nullable', 'string', Rule::exists('roles', 'name')],
+            'phone_number' => ['nullable', 'string', 'max:50'],
+            'organization_id' => ['nullable', 'integer', Rule::exists('organizations', 'id')],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'sort' => ['nullable', 'string', Rule::in(['id', 'name', 'email'])],
             'direction' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
@@ -42,8 +44,21 @@ class UserController extends Controller
         $direction = $validated['direction'] ?? 'asc';
 
         $users = User::query()
-            ->select(['id', 'name', 'email', 'created_at', 'updated_at'])
-            ->with('roles:id,name')
+            ->select([
+                'id',
+                'name',
+                'email',
+                'phone_number',
+                'address_street',
+                'address_house_number',
+                'address_zip_code',
+                'address_city',
+                'address_country',
+                'organization_id',
+                'created_at',
+                'updated_at',
+            ])
+            ->with(['organization:id,name,type,email,phone_number,website', 'roles:id,name'])
             ->filter($validated)
             ->orderBy($sort, $direction)
             ->paginate($perPage)
@@ -54,7 +69,18 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): JsonResponse
     {
-        $data = $request->safe()->only(['name', 'email', 'password']);
+        $data = $request->safe()->only([
+            'name',
+            'email',
+            'password',
+            'phone_number',
+            'address_street',
+            'address_house_number',
+            'address_zip_code',
+            'address_city',
+            'address_country',
+            'organization_id',
+        ]);
 
         $user = User::query()->create($data);
 
@@ -65,7 +91,7 @@ class UserController extends Controller
             $user->assignRole(RoleName::User->value);
         }
 
-        $user->load('roles:id,name');
+        $user->load(['organization:id,name,type,email,phone_number,website', 'roles:id,name']);
 
         return response()->json([
             'data' => new UserResource($user),
@@ -76,7 +102,7 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
-        $user->loadMissing(['roles:id,name']);
+        $user->loadMissing(['organization:id,name,type,email,phone_number,website', 'roles:id,name']);
 
         return response()->json([
             'data' => new UserResource($user),
@@ -85,7 +111,17 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
-        $attributes = $request->safe()->only(['name', 'email']);
+        $attributes = $request->safe()->only([
+            'name',
+            'email',
+            'phone_number',
+            'address_street',
+            'address_house_number',
+            'address_zip_code',
+            'address_city',
+            'address_country',
+            'organization_id',
+        ]);
 
         if (! empty($attributes)) {
             $user->fill($attributes);
@@ -102,7 +138,7 @@ class UserController extends Controller
             $user->syncRoles($request->validated('roles'));
         }
 
-        $user->load('roles:id,name');
+        $user->load(['organization:id,name,type,email,phone_number,website', 'roles:id,name']);
 
         return response()->json([
             'data' => new UserResource($user),

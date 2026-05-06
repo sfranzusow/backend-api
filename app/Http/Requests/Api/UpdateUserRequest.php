@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,6 +43,19 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'address_street' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'address_house_number' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'address_zip_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'address_city' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'address_country' => ['sometimes', 'nullable', 'string', 'size:2'],
+            'organization_id' => [
+                Rule::prohibitedIf(fn () => ! $this->canManageOrganizationAssignment()),
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('organizations', 'id'),
+            ],
             'current_password' => [
                 Rule::excludeUnless(fn () => $this->user()->is($user) && $this->filled('password')),
                 'required',
@@ -50,5 +65,17 @@ class UpdateUserRequest extends FormRequest
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];
+    }
+
+    private function canManageOrganizationAssignment(): bool
+    {
+        $authUser = $this->user();
+
+        if (! $authUser instanceof User) {
+            return false;
+        }
+
+        return $authUser->hasRole(RoleName::Admin->value)
+            || $authUser->can(PermissionName::UsersUpdate->value);
     }
 }

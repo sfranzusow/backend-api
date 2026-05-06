@@ -8,6 +8,7 @@ Die technische Detailquelle bleibt [openapi.yaml](/home/slavik/project/backend-a
 Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 
 - `users`: Benutzerkonten und Rollen
+- `organizations`: Organisationen wie Verwaltungen oder Firmen, denen Benutzer optional zugeordnet sind
 - `addresses`: Postadressen
 - `properties`: Immobilien bzw. Einheiten
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
@@ -49,6 +50,7 @@ Die Rollen steuern jetzt `users`, `properties`, `addresses` und `rental-agreemen
 ### Benutzerverwaltung
 
 Die Benutzer-API dient zur Verwaltung von Accounts und Rollen.
+Sie enthaelt jetzt auch einfache Kontaktdaten: Telefonnummer, aktuelle Adresse und optional eine Organisation.
 
 - `GET /users`: Benutzerliste
 - `POST /users`: neuen Benutzer anlegen
@@ -59,6 +61,8 @@ Die Benutzer-API dient zur Verwaltung von Accounts und Rollen.
 Besonderheiten:
 
 - Beim Anlegen eines Users wird ohne Rollenangabe automatisch die Rolle `user` gesetzt.
+- Beim Anlegen und durch administrative User-Verwaltung kann `organization_id` gesetzt werden.
+- Benutzer koennen im eigenen Profil Kontaktdaten wie `phone_number` und aktuelle Adressfelder pflegen.
 - Ein Benutzer darf sein eigenes Profil aktualisieren, wenn seine Rolle das erlaubt.
 - Eigene Rollen duerfen nicht ueber die API geaendert werden.
 - Admins duerfen fast alles, koennen aber nicht den eigenen Account loeschen oder die eigenen Rollen aendern.

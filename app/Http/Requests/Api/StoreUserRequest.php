@@ -28,6 +28,13 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'address_street' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'address_house_number' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'address_zip_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'address_city' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'address_country' => ['sometimes', 'nullable', 'string', 'size:2'],
+            'organization_id' => ['sometimes', 'nullable', 'integer', Rule::exists('organizations', 'id')],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];

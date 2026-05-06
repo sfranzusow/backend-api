@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\RoleName;
+use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,18 +36,36 @@ class UserCrudTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole(RoleName::Admin->value);
+        $organization = Organization::factory()->create([
+            'name' => 'Muster Verwaltung',
+            'type' => 'property_management',
+        ]);
 
         $response = $this->actingAs($admin, 'sanctum')->postJson('/api/users', [
             'name' => 'Neu Nutzer',
             'email' => 'neu@example.com',
             'password' => 'password1',
             'password_confirmation' => 'password1',
+            'phone_number' => '+49 30 123456',
+            'address_street' => 'Hauptstrasse',
+            'address_house_number' => '12a',
+            'address_zip_code' => '10115',
+            'address_city' => 'Berlin',
+            'address_country' => 'DE',
+            'organization_id' => $organization->id,
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.email', 'neu@example.com');
+            ->assertJsonPath('data.email', 'neu@example.com')
+            ->assertJsonPath('data.phone_number', '+49 30 123456')
+            ->assertJsonPath('data.address_city', 'Berlin')
+            ->assertJsonPath('data.organization_id', $organization->id)
+            ->assertJsonPath('data.organization.name', 'Muster Verwaltung');
 
-        $this->assertTrue(User::query()->where('email', 'neu@example.com')->exists());
+        $this->assertTrue(User::query()
+            ->where('email', 'neu@example.com')
+            ->where('organization_id', $organization->id)
+            ->exists());
     }
 
     public function test_forbids_non_admin_from_creating_users(): void
@@ -83,15 +102,22 @@ class UserCrudTest extends TestCase
         $admin->assignRole(RoleName::Admin->value);
 
         $target = User::factory()->create(['name' => 'Alt']);
+        $organization = Organization::factory()->create([
+            'name' => 'Admin Verwaltung',
+            'type' => 'property_management',
+        ]);
 
         $response = $this->actingAs($admin, 'sanctum')->putJson('/api/users/'.$target->id, [
             'name' => 'Neu',
+            'organization_id' => $organization->id,
         ]);
 
         $response->assertSuccessful()
-            ->assertJsonPath('data.name', 'Neu');
+            ->assertJsonPath('data.name', 'Neu')
+            ->assertJsonPath('data.organization.name', 'Admin Verwaltung');
 
         $this->assertSame('Neu', $target->fresh()->name);
+        $this->assertSame($organization->id, $target->fresh()->organization_id);
     }
 
     public function test_allows_admin_to_change_another_users_roles(): void
@@ -132,10 +158,55 @@ class UserCrudTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->putJson('/api/users/'.$user->id, [
             'name' => 'Ich Neu',
+            'phone_number' => '+49 89 456789',
+            'address_street' => 'Nebenweg',
+            'address_house_number' => '4',
+            'address_zip_code' => '80331',
+            'address_city' => 'Muenchen',
+            'address_country' => 'DE',
         ]);
 
         $response->assertSuccessful()
-            ->assertJsonPath('data.name', 'Ich Neu');
+            ->assertJsonPath('data.name', 'Ich Neu')
+            ->assertJsonPath('data.phone_number', '+49 89 456789')
+            ->assertJsonPath('data.address_city', 'Muenchen');
+
+        $freshUser = $user->fresh();
+
+        $this->assertSame('Ich Neu', $freshUser->name);
+        $this->assertSame('+49 89 456789', $freshUser->phone_number);
+        $this->assertSame('Muenchen', $freshUser->address_city);
+    }
+
+    public function test_rejects_unknown_organization_when_updating_a_user(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(RoleName::Admin->value);
+
+        $target = User::factory()->create();
+
+        $response = $this->actingAs($admin, 'sanctum')->patchJson('/api/users/'.$target->id, [
+            'organization_id' => 999999,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['organization_id']);
+    }
+
+    public function test_prevents_user_from_assigning_own_organization(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::User->value);
+        $organization = Organization::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')->patchJson('/api/users/'.$user->id, [
+            'organization_id' => $organization->id,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['organization_id']);
+
+        $this->assertNull($user->fresh()->organization_id);
     }
 
     public function test_allows_user_to_change_own_password_with_current_password(): void
