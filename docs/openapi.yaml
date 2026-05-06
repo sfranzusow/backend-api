@@ -1058,7 +1058,7 @@ components:
           type: string
           description: Plain-Text-Token für Authorization-Header
         user:
-          $ref: '#/components/schemas/UserWithoutRoles'
+          $ref: '#/components/schemas/User'
 
     InvalidCredentialsError:
       type: object
@@ -1067,25 +1067,6 @@ components:
         message:
           type: string
           example: Die Anmeldedaten sind ungültig.
-
-    UserWithoutRoles:
-      type: object
-      description: UserResource ohne geladene roles-Relation (z. B. Login)
-      required: [id, name, email, created_at, updated_at]
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
 
     Organization:
       type: object
@@ -1171,6 +1152,19 @@ components:
           items:
             type: string
           description: Rollennamen (z. B. admin, user), wenn mitgeladen
+
+    UserSummary:
+      type: object
+      description: Reduzierter User in verschachtelten Relationen, z. B. Property-Mitglieder oder Mietvertragsparteien.
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
 
     StoreUserRequest:
       type: object
@@ -1542,7 +1536,7 @@ components:
       required: [user, role, start_date, end_date]
       properties:
         user:
-          $ref: '#/components/schemas/UserWithoutRoles'
+          $ref: '#/components/schemas/UserSummary'
         role:
           type: string
           enum: [landlord, tenant, manager]
@@ -1637,9 +1631,9 @@ components:
         property:
           $ref: '#/components/schemas/Property'
         landlord:
-          $ref: '#/components/schemas/UserWithoutRoles'
+          $ref: '#/components/schemas/UserSummary'
         tenant:
-          $ref: '#/components/schemas/UserWithoutRoles'
+          $ref: '#/components/schemas/UserSummary'
         created_at:
           type: string
           format: date-time
