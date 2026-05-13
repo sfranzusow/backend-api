@@ -117,9 +117,17 @@ Ein Mietvertrag:
 Aktueller Stand:
 
 - `admin` darf alle Mietvertraege sehen und bearbeiten
-- `landlord` darf eigene Mietvertraege anlegen, sehen, aendern und loeschen
+- `landlord` darf eigene Mietvertraege anlegen, sehen, aendern und loeschen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 - `tenant` darf nur eigene Mietvertraege sehen
 - `user` hat keinen Zugriff
+
+Wichtige Validierungsregeln fuer das Frontend:
+
+- neue Mietvertraege starten als `draft`; beim Anlegen ist `status` optional, aber nur `draft` erlaubt
+- fuer `landlord` muss `landlord_id` die ID des authentifizierten Benutzers sein
+- fuer `landlord` muss `property_id` auf ein Objekt zeigen, das dieser Benutzer als Vermieter verwaltet
+- beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
+- erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
 
 ## Rechte nach Rolle
 

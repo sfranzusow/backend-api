@@ -753,6 +753,13 @@ paths:
       summary: Mietvertrag anlegen
       description: |
         Nur für `admin` oder `landlord`.
+        Neue Mietverträge starten immer als `draft`; wenn `status` gesendet wird,
+        darf er nur `draft` sein.
+
+        Für `landlord` gilt zusätzlich:
+        - `landlord_id` muss die ID des authentifizierten Benutzers sein.
+        - `property_id` muss zu einem Objekt gehören, das der authentifizierte
+          Benutzer als Vermieter verwaltet.
       security:
         - sanctumBearer: []
       requestBody:
@@ -821,7 +828,18 @@ paths:
       summary: Mietvertrag aktualisieren
       description: |
         Entspricht derselben Update-Logik wie `PATCH /rental-agreements/{rentalAgreement}`.
-        Nur für `admin` oder den zugeordneten `landlord`.
+        Nur für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet.
+
+        Statuswechsel sind eingeschränkt:
+        - `draft` -> `draft`, `active`
+        - `active` -> `active`, `terminated`, `ended`
+        - `terminated` -> `terminated`
+        - `ended` -> `ended`
+
+        Für `landlord` gilt zusätzlich:
+        - `landlord_id` darf nicht auf einen anderen Benutzer geändert werden.
+        - `property_id` darf nur auf ein selbst verwaltetes Objekt geändert werden.
       security:
         - sanctumBearer: []
       requestBody:
@@ -856,7 +874,18 @@ paths:
       tags: [RentalAgreements]
       summary: Mietvertrag aktualisieren
       description: |
-        Nur für `admin` oder den zugeordneten `landlord`.
+        Nur für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet.
+
+        Statuswechsel sind eingeschränkt:
+        - `draft` -> `draft`, `active`
+        - `active` -> `active`, `terminated`, `ended`
+        - `terminated` -> `terminated`
+        - `ended` -> `ended`
+
+        Für `landlord` gilt zusätzlich:
+        - `landlord_id` darf nicht auf einen anderen Benutzer geändert werden.
+        - `property_id` darf nur auf ein selbst verwaltetes Objekt geändert werden.
       security:
         - sanctumBearer: []
       requestBody:
@@ -891,7 +920,8 @@ paths:
       tags: [RentalAgreements]
       summary: Mietvertrag löschen
       description: |
-        Nur für `admin` oder den zugeordneten `landlord`.
+        Nur für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet.
       security:
         - sanctumBearer: []
       responses:
@@ -1643,12 +1673,18 @@ components:
 
     StoreRentalAgreementRequest:
       type: object
+      description: |
+        Neue Mietverträge starten immer als `draft`.
+        Für `landlord` muss `landlord_id` die eigene Benutzer-ID sein und
+        `property_id` ein selbst verwaltetes Objekt referenzieren.
       required: [property_id, landlord_id, tenant_id, date_from, rent_cold]
       properties:
         property_id:
           type: integer
+          description: Für `landlord` nur selbst verwaltete Objekte.
         landlord_id:
           type: integer
+          description: Für `landlord` muss dies die eigene Benutzer-ID sein.
         tenant_id:
           type: integer
         date_from:
@@ -1675,17 +1711,29 @@ components:
           maxLength: 3
         status:
           type: string
-          enum: [draft, active, terminated, ended]
+          enum: [draft]
+          default: draft
         notes:
           type: string
 
     UpdateRentalAgreementRequest:
       type: object
+      description: |
+        Statuswechsel sind eingeschränkt:
+        `draft` -> `draft`/`active`,
+        `active` -> `active`/`terminated`/`ended`,
+        `terminated` -> `terminated`,
+        `ended` -> `ended`.
+
+        Für `landlord` darf `landlord_id` nicht auf einen anderen Benutzer
+        geändert werden und `property_id` nur auf ein selbst verwaltetes Objekt.
       properties:
         property_id:
           type: integer
+          description: Für `landlord` nur selbst verwaltete Objekte.
         landlord_id:
           type: integer
+          description: Für `landlord` muss dies die eigene Benutzer-ID bleiben.
         tenant_id:
           type: integer
         date_from:
@@ -1713,6 +1761,12 @@ components:
         status:
           type: string
           enum: [draft, active, terminated, ended]
+          description: |
+            Erlaubte Übergänge:
+            `draft` -> `draft`/`active`,
+            `active` -> `active`/`terminated`/`ended`,
+            `terminated` -> `terminated`,
+            `ended` -> `ended`.
         notes:
           type: string
 
