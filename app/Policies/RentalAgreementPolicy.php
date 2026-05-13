@@ -55,7 +55,15 @@ class RentalAgreementPolicy
 
     private function isLandlordOfAgreement(User $authUser, RentalAgreement $rentalAgreement): bool
     {
-        return $authUser->hasRole(RoleName::Landlord->value)
-            && $rentalAgreement->landlord_id === $authUser->id;
+        if (! $authUser->hasRole(RoleName::Landlord->value) || $rentalAgreement->landlord_id !== $authUser->id) {
+            return false;
+        }
+
+        return $rentalAgreement->property()
+            ->whereHas('users', function ($query) use ($authUser) {
+                $query->where('users.id', $authUser->id)
+                    ->where('property_user.role', RoleName::Landlord->value);
+            })
+            ->exists();
     }
 }

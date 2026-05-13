@@ -15,6 +15,21 @@ class RentalAgreement extends Model
     /** @use HasFactory<RentalAgreementFactory> */
     use HasFactory;
 
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_TERMINATED = 'terminated';
+
+    public const STATUS_ENDED = 'ended';
+
+    private const STATUS_TRANSITIONS = [
+        self::STATUS_DRAFT => [self::STATUS_DRAFT, self::STATUS_ACTIVE],
+        self::STATUS_ACTIVE => [self::STATUS_ACTIVE, self::STATUS_TERMINATED, self::STATUS_ENDED],
+        self::STATUS_TERMINATED => [self::STATUS_TERMINATED],
+        self::STATUS_ENDED => [self::STATUS_ENDED],
+    ];
+
     protected $fillable = [
         'property_id',
         'landlord_id',
@@ -40,6 +55,24 @@ class RentalAgreement extends Model
             'service_charges' => 'decimal:2',
             'deposit' => 'decimal:2',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function statuses(): array
+    {
+        return [
+            self::STATUS_DRAFT,
+            self::STATUS_ACTIVE,
+            self::STATUS_TERMINATED,
+            self::STATUS_ENDED,
+        ];
+    }
+
+    public function canTransitionToStatus(string $status): bool
+    {
+        return in_array($status, self::STATUS_TRANSITIONS[$this->status] ?? [], true);
     }
 
     public function property(): BelongsTo
