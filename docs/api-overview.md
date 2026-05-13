@@ -129,6 +129,11 @@ Wichtige Validierungsregeln fuer das Frontend:
 - beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
 
+Geplante Vertragsdokumente und PDF-Erzeugung sind in
+[`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
+beschrieben. Die dort genannten Dokument-Endpunkte sind noch nicht implementiert
+und stehen deshalb noch nicht in `openapi.yaml`.
+
 ## Rechte nach Rolle
 
 ### Admin
@@ -201,5 +206,6 @@ Wenn du diese API an ein Frontend uebergibst, ist wichtig:
 
 - `openapi.yaml` beschreibt Request- und Response-Formate im Detail
 - dieses Dokument erklaert die Fachlogik und Rechte einfacher
+- `rental-agreement-documents.md` beschreibt den geplanten PDF- und Dokumentworkflow
 - bei `properties` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff auf ein Objekt hat
 - bei `addresses`, `properties` und `rental-agreements` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff hat

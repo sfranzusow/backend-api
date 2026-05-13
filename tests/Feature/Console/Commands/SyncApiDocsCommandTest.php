@@ -43,6 +43,11 @@ class SyncApiDocsCommandTest extends TestCase
             base_path('docs/api-overview.md'),
             $this->frontendPath.'/docs/api-overview.md',
         );
+
+        $this->assertFileEquals(
+            base_path('docs/rental-agreement-documents.md'),
+            $this->frontendPath.'/docs/rental-agreement-documents.md',
+        );
     }
 
     public function test_fails_when_frontend_path_does_not_exist(): void

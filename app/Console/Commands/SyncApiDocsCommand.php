@@ -53,6 +53,7 @@ class SyncApiDocsCommand extends Command
         return [
             'docs/openapi.yaml',
             'docs/api-overview.md',
+            'docs/rental-agreement-documents.md',
         ];
     }
 
