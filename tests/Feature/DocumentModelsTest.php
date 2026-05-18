@@ -1,5 +1,7 @@
 <?php
 
+namespace Tests\Feature;
+
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\DocumentTemplate;
@@ -10,85 +12,93 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-uses(TestCase::class, RefreshDatabase::class);
+class DocumentModelsTest extends TestCase
+{
+    use RefreshDatabase;
 
-test('a rental agreement can own generic documents', function () {
-    $template = DocumentTemplate::factory()->create([
-        'document_type' => 'rental_agreement_contract',
-        'status' => DocumentTemplate::STATUS_ACTIVE,
-    ]);
-    $agreement = RentalAgreement::factory()->create();
-    $creator = User::factory()->create();
+    public function test_a_rental_agreement_can_own_generic_documents(): void
+    {
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+        ]);
+        $agreement = RentalAgreement::factory()->create();
+        $creator = User::factory()->create();
 
-    $document = $agreement->documents()->create([
-        'document_template_id' => $template->id,
-        'document_type' => 'rental_agreement_contract',
-        'status' => Document::STATUS_DRAFT,
-        'title' => 'Wohnraummietvertrag',
-        'metadata' => ['source' => 'manual'],
-        'created_by_id' => $creator->id,
-    ]);
+        $document = $agreement->documents()->create([
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+            'title' => 'Wohnraummietvertrag',
+            'metadata' => ['source' => 'manual'],
+            'created_by_id' => $creator->id,
+        ]);
 
-    $document->load(['documentable', 'template', 'creator']);
+        $document->load(['documentable', 'template', 'creator']);
 
-    expect($document->documentable->is($agreement))->toBeTrue()
-        ->and($document->template->is($template))->toBeTrue()
-        ->and($document->creator->is($creator))->toBeTrue()
-        ->and($document->metadata)->toBe(['source' => 'manual'])
-        ->and($agreement->documents()->first()->is($document))->toBeTrue();
-});
+        $this->assertTrue($document->documentable->is($agreement));
+        $this->assertTrue($document->template->is($template));
+        $this->assertTrue($document->creator->is($creator));
+        $this->assertSame(['source' => 'manual'], $document->metadata);
+        $this->assertTrue($agreement->documents()->first()->is($document));
+    }
 
-test('document versions keep snapshots and files', function () {
-    $document = Document::factory()->create();
-    $template = DocumentTemplate::factory()->create();
-    $generator = User::factory()->create();
+    public function test_document_versions_keep_snapshots_and_files(): void
+    {
+        $document = Document::factory()->create();
+        $template = DocumentTemplate::factory()->create();
+        $generator = User::factory()->create();
 
-    $version = DocumentVersion::factory()->create([
-        'document_id' => $document->id,
-        'document_template_id' => $template->id,
-        'version_number' => 2,
-        'status' => DocumentVersion::STATUS_GENERATED,
-        'data_snapshot' => [
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'document_template_id' => $template->id,
+            'version_number' => 2,
+            'status' => DocumentVersion::STATUS_GENERATED,
+            'data_snapshot' => [
+                'rental_agreement' => [
+                    'rent_cold' => '900.00',
+                ],
+            ],
+            'generated_by_id' => $generator->id,
+        ]);
+
+        $file = DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+        ]);
+
+        $document->load(['latestVersion', 'versions.files']);
+        $version->load(['document', 'template', 'generatedBy', 'files']);
+        $file->load('version');
+
+        $this->assertTrue($document->latestVersion->is($version));
+        $this->assertCount(1, $document->versions);
+        $this->assertTrue($version->document->is($document));
+        $this->assertTrue($version->template->is($template));
+        $this->assertTrue($version->generatedBy->is($generator));
+        $this->assertSame([
             'rental_agreement' => [
                 'rent_cold' => '900.00',
             ],
-        ],
-        'generated_by_id' => $generator->id,
-    ]);
+        ], $version->data_snapshot);
+        $this->assertCount(1, $version->files);
+        $this->assertTrue($file->version->is($version));
+    }
 
-    $file = DocumentFile::factory()->create([
-        'document_version_id' => $version->id,
-        'file_type' => DocumentFile::TYPE_GENERATED_PDF,
-    ]);
+    public function test_document_version_numbers_are_unique_per_document(): void
+    {
+        $document = Document::factory()->create();
 
-    $document->load(['latestVersion', 'versions.files']);
-    $version->load(['document', 'template', 'generatedBy', 'files']);
-    $file->load('version');
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+        ]);
 
-    expect($document->latestVersion->is($version))->toBeTrue()
-        ->and($document->versions)->toHaveCount(1)
-        ->and($version->document->is($document))->toBeTrue()
-        ->and($version->template->is($template))->toBeTrue()
-        ->and($version->generatedBy->is($generator))->toBeTrue()
-        ->and($version->data_snapshot)->toBe([
-            'rental_agreement' => [
-                'rent_cold' => '900.00',
-            ],
-        ])
-        ->and($version->files)->toHaveCount(1)
-        ->and($file->version->is($version))->toBeTrue();
-});
+        $this->expectException(QueryException::class);
 
-test('document version numbers are unique per document', function () {
-    $document = Document::factory()->create();
-
-    DocumentVersion::factory()->create([
-        'document_id' => $document->id,
-        'version_number' => 1,
-    ]);
-
-    expect(fn () => DocumentVersion::factory()->create([
-        'document_id' => $document->id,
-        'version_number' => 1,
-    ]))->toThrow(QueryException::class);
-});
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+        ]);
+    }
+}

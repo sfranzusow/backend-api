@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyMemberController;
 use App\Http\Controllers\Api\RentalAgreementController;
+use App\Http\Controllers\Api\RentalAgreementDocumentController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,4 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('properties', PropertyController::class);
     Route::put('/properties/{property}/members', [PropertyMemberController::class, 'sync']);
     Route::apiResource('rental-agreements', RentalAgreementController::class);
+    Route::get('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'index']);
+    Route::post('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'store']);
+    Route::get('/documents/{document}', [DocumentController::class, 'show']);
 });

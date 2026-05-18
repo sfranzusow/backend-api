@@ -68,9 +68,10 @@ Version eingefroren.
 
 ## Aktueller Backend-Stand
 
-Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt.
-Es gibt noch keine Dokument-HTTP-Endpunkte und noch keine PDF-Erzeugung.
-`openapi.yaml` bleibt deshalb unveraendert.
+Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
+inklusive erster HTTP-Endpunkte fuer Dokument-Metadaten. PDF-Erzeugung,
+Download und Uploads sind noch nicht implementiert. Die technische API ist in
+`openapi.yaml` dokumentiert.
 
 Angelegt sind:
 
@@ -88,6 +89,15 @@ Angelegt sind:
 `RentalAgreement` hat eine polymorphe `documents`-Relation. Dadurch kann ein
 Mietvertrag Dokumente bekommen, ohne PDF-Pfade oder Dokument-Interna direkt im
 Mietvertrag zu speichern.
+
+Aktuell implementierte Endpunkte:
+
+- `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
+- `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
+
+Die Endpunkte erzeugen noch keine `DocumentVersion` und keine Datei. Sie haengen
+zunaechst nur eine generische Dokumentakte an den Mietvertrag.
 
 ## Modulgrenzen
 
@@ -267,14 +277,15 @@ finalisierte Dokumentversion und den Upload-Status.
 
 ## Vorgeschlagene API
 
-Diese Endpunkte sind noch nicht implementiert. Sie beschreiben die geplante
-Richtung fuer Backend und Frontend.
+Diese Liste beschreibt die Richtung fuer Backend und Frontend. Die ersten
+Metadaten-Endpunkte sind bereits implementiert, PDF- und Upload-Endpunkte noch
+nicht.
 
 - `GET /document-templates`: Vorlagenliste
 - `GET /document-templates/{template}`: Vorlage anzeigen
-- `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentversion/PDF erzeugen
-- `GET /rental-agreements/{rentalAgreement}/documents`: Dokumentversionen eines Vertrags
-- `GET /documents/{document}`: Dokument-Metadaten anzeigen
+- `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten, spaeter PDF-Erzeugung oder separater Generate-Endpunkt
+- `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
+- `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
 - `GET /documents/{document}/download`: erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Version hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Version herunterladen
@@ -287,9 +298,8 @@ sein:
 
 ## Frontend-Hinweise
 
-- `openapi.yaml` soll erst angepasst werden, wenn die Endpunkte implementiert
-  sind.
-- Diese Datei ist bis dahin die fachliche Roadmap fuer die Frontend-Planung.
+- `openapi.yaml` beschreibt die aktuell implementierten Dokument-Endpunkte.
+- Diese Datei bleibt die fachliche Roadmap fuer den weiteren Dokumentworkflow.
 - Das Frontend sollte mit Dokumentversionen rechnen, nicht nur mit einem
   einzelnen PDF pro Mietvertrag.
 - Das Frontend sollte unterscheiden zwischen erzeugtem Original-PDF und
@@ -317,10 +327,11 @@ Der erste Backend-Schritt ist umgesetzt:
 2. Tabelle und Modell fuer `DocumentTemplate`.
 3. Tabelle und Modell fuer `Document`.
 4. Tabellen und Modelle fuer `DocumentVersion` und `DocumentFile`.
+5. Dokument-Metadaten per API an Mietvertraege haengen und abrufen.
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Ein Standard-Mustermietvertrag als Seed-Daten.
+1. Ein Standard-Mustermietvertrag als Seed-Daten oder Admin-Template-API.
 2. PDF-Erzeugung aus Vorlage und Mietvertragsdaten.
 3. Download-Endpunkt fuer erzeugte PDFs.
 4. Upload-Endpunkt fuer unterschriebene Versionen.

@@ -27,6 +27,7 @@ tags:
   - name: Addresses
   - name: Properties
   - name: RentalAgreements
+  - name: Documents
 
 paths:
   /ping:
@@ -934,6 +935,117 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /rental-agreements/{rentalAgreement}/documents:
+    parameters:
+      - name: rentalAgreement
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Dokumente eines Mietvertrags auflisten
+      description: |
+        `admin` darf alle Dokumente sehen.
+        `landlord` sieht Dokumente eigener Mietverträge.
+        `tenant` sieht Dokumente eigener Mietverträge.
+        Es werden aktuell nur Dokument-Metadaten geliefert; PDF-Erzeugung und Uploads sind noch nicht Teil dieses Endpunkts.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Documents]
+      summary: Dokument-Metadaten an Mietvertrag hängen
+      description: |
+        Erstellt eine generische Dokumentakte für den Mietvertrag.
+        Der neue Dokumentstatus ist immer `draft`.
+
+        Erlaubt für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet. `tenant` darf Dokumente lesen, aber nicht erstellen.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreRentalAgreementDocumentRequest'
+      responses:
+        '201':
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /documents/{document}:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Dokument-Metadaten anzeigen
+      description: |
+        Zeigt ein einzelnes Dokument, wenn der authentifizierte Benutzer das
+        verknüpfte Fachobjekt sehen darf. Für Mietvertragsdokumente gilt also
+        dieselbe Leseberechtigung wie beim Mietvertrag.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     sanctumBearer:
@@ -1783,6 +1895,222 @@ components:
           additionalProperties: true
         meta:
           type: object
+          additionalProperties: true
+
+    DocumentTemplate:
+      type: object
+      required: [id, name, document_type, template_type, locale, version, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        document_type:
+          type: string
+          example: rental_agreement_contract
+        template_type:
+          type: string
+          example: default
+        locale:
+          type: string
+          example: de-DE
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [draft, active, archived]
+        content:
+          type: string
+          nullable: true
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_by_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentFile:
+      type: object
+      required: [id, document_version_id, file_type, disk, path, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        document_version_id:
+          type: integer
+        file_type:
+          type: string
+          enum: [generated_pdf, signed_upload, attachment]
+        disk:
+          type: string
+          example: local
+        path:
+          type: string
+        original_name:
+          type: string
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        size:
+          type: integer
+          nullable: true
+        checksum:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        uploaded_by_id:
+          type: integer
+          nullable: true
+        uploaded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentVersion:
+      type: object
+      required: [id, document_id, version_number, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        document_template_id:
+          type: integer
+          nullable: true
+        version_number:
+          type: integer
+        status:
+          type: string
+          enum: [draft, generated, shared, signed_uploaded, void]
+        title:
+          type: string
+          nullable: true
+        content_snapshot:
+          type: string
+          nullable: true
+        template_snapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        data_snapshot:
+          type: object
+          nullable: true
+          additionalProperties: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentFile'
+        generated_by_id:
+          type: integer
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Document:
+      type: object
+      required: [id, documentable_type, documentable_id, document_type, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        documentable_type:
+          type: string
+          example: RentalAgreement
+        documentable_id:
+          type: integer
+        document_template_id:
+          type: integer
+          nullable: true
+        document_type:
+          type: string
+          example: rental_agreement_contract
+        status:
+          type: string
+          enum: [draft, generated, shared, signed_uploaded, void]
+        title:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        template:
+          allOf:
+            - $ref: '#/components/schemas/DocumentTemplate'
+          nullable: true
+        latest_version:
+          allOf:
+            - $ref: '#/components/schemas/DocumentVersion'
+          nullable: true
+        created_by_id:
+          type: integer
+          nullable: true
+        creator:
+          allOf:
+            - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StoreRentalAgreementDocumentRequest:
+      type: object
+      description: |
+        Erstellt eine Dokumentakte am Mietvertrag. Der Status wird serverseitig
+        als `draft` gesetzt. Wenn `document_template_id` gesetzt ist, muss die
+        Vorlage denselben `document_type` haben.
+      required: [document_type]
+      properties:
+        document_template_id:
+          type: integer
+          nullable: true
+        document_type:
+          type: string
+          maxLength: 255
+          example: rental_agreement_contract
+        title:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: Wohnraummietvertrag
+        metadata:
+          type: object
+          nullable: true
           additionalProperties: true
 
     ValidationError:

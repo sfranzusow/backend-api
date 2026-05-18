@@ -107,6 +107,8 @@ Die Rental-Agreement-API verwaltet echte Mietvertraege.
 - `GET /rental-agreements/{rentalAgreement}`: Mietvertrag ansehen
 - `PUT/PATCH /rental-agreements/{rentalAgreement}`: Mietvertrag aendern
 - `DELETE /rental-agreements/{rentalAgreement}`: Mietvertrag loeschen
+- `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente des Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/documents`: Dokument-Metadaten an Mietvertrag haengen
 
 Ein Mietvertrag:
 
@@ -114,6 +116,7 @@ Ein Mietvertrag:
 - referenziert genau einen `landlord`
 - referenziert genau einen `tenant`
 - kann Laufzeiten, Miete, Kaution und Status enthalten
+- kann generische Dokumentakten haben
 
 Aktueller Stand:
 
@@ -130,11 +133,33 @@ Wichtige Validierungsregeln fuer das Frontend:
 - beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
 
+### Dokumente
+
+Die Documents-API verwaltet aktuell nur Dokument-Metadaten. Es gibt noch keine
+PDF-Erzeugung, keinen Download und keinen unterschriebenen Upload.
+
+- `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
+- `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
+
+Beim Anlegen gilt:
+
+- `document_type` ist erforderlich, z. B. `rental_agreement_contract`
+- `document_template_id` ist optional
+- wenn `document_template_id` gesetzt ist, muss die Vorlage denselben `document_type` haben
+- neue Dokumente starten immer als `draft`
+
+Berechtigungen:
+
+- `admin` darf Dokumente fuer alle Mietvertraege sehen und anlegen
+- `landlord` darf Dokumente eigener Mietvertraege sehen und anlegen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- `tenant` darf Dokumente eigener Mietvertraege sehen, aber nicht anlegen
+- `user` hat keinen Zugriff
+
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
 [`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
-beschrieben. Die generische Datenbasis fuer Documents ist angelegt. Die dort
-genannten Dokument-Endpunkte sind noch nicht implementiert und stehen deshalb
-noch nicht in `openapi.yaml`.
+beschrieben. Die ersten Dokument-Metadaten-Endpunkte stehen in `openapi.yaml`.
+PDF-Erzeugung, Download und Uploads sind noch Folgepakete.
 
 ## Rechte nach Rolle
 
@@ -150,7 +175,7 @@ noch nicht in `openapi.yaml`.
 - darf alle Properties sehen
 - darf alle Properties anlegen, bearbeiten und loeschen
 - darf Property-Mitglieder bei jedem Objekt verwalten
-- darf alle Address- und Rental-Agreement-Endpunkte nutzen
+- darf alle Address-, Rental-Agreement- und Document-Endpunkte nutzen
 
 Einschraenkungen:
 
@@ -170,6 +195,7 @@ Einschraenkungen:
 - darf Adressen eigener Objekte sehen, aendern und loeschen
 - darf neue Adressen anlegen
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
+- darf Dokumente eigener Mietvertraege sehen und anlegen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 
 ### Tenant
 
@@ -183,6 +209,7 @@ Einschraenkungen:
 - darf Property-Mitglieder nicht verwalten
 - darf keine Adressen sehen
 - darf eigene Mietvertraege sehen
+- darf Dokumente eigener Mietvertraege sehen
 
 ### User
 
@@ -195,12 +222,13 @@ Einschraenkungen:
 - darf keine Property-Mitglieder verwalten
 - darf keine Adressen sehen
 - darf keine Mietvertraege sehen
+- darf keine Dokumente sehen
 
 ## Wichtige fachliche Hinweise
 
 - `tenant` kann ein Property sehen, ohne dass dabei automatisch die zugehoerige Adresse im JSON erscheint
 - Mietvertraege enthalten fuer `tenant` weiterhin das Property, aber die verschachtelte Adresse wird ausgeblendet
-- die Sichtbarkeit von Adressen und Mietvertraegen wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
+- die Sichtbarkeit von Adressen, Mietvertraegen und Dokumenten wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
 
 ## Empfehlung fuer das Frontend
 

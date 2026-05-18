@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Policies\DocumentPolicy;
 use Database\Factories\DocumentFactory;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+#[UsePolicy(DocumentPolicy::class)]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */

@@ -12,6 +12,7 @@
 - Vorhaben für Vertragsdokumente, PDF-Erzeugung, Vorlagen, Branding und einfachen Unterschriften-Upload dokumentiert: `docs/rental-agreement-documents.md`.
 - Architekturentscheidung festgehalten: Documents als generisches internes Modul planen, damit es später in ein eigenes Repository oder Paket herausgelöst werden kann.
 - Generische Documents-Struktur angelegt: `DocumentTemplate`, `Document`, `DocumentVersion`, `DocumentFile`.
+- Dokumente können per API an Mietverträge gehängt, gelistet und einzeln abgefragt werden.
 
 ### Nächste mögliche Schritte
 
