@@ -1,9 +1,8 @@
 # Documents-Modul: Mietvertragsdokumente und PDF-Workflow
 
-Dieses Dokument beschreibt das geplante Documents-Modul am ersten Anwendungsfall
-Mietvertragsdokumente. Es ist eine Produkt- und Frontend-Uebergabe, keine
-Beschreibung bereits implementierter API-Endpunkte. Die aktuelle technische API
-bleibt `docs/openapi.yaml`.
+Dieses Dokument beschreibt das Documents-Modul am ersten Anwendungsfall
+Mietvertragsdokumente. Es ist eine Produkt- und Frontend-Uebergabe fuer den
+Dokument-Workflow. Die aktuelle technische HTTP-API bleibt `docs/openapi.yaml`.
 
 ## Ziel
 
@@ -66,6 +65,29 @@ Die Vorlage ist flexibel und kann Text, Abschnitte, Platzhalter und spaeter
 optionale Klauseln enthalten. Eine erzeugte Dokumentversion ist ein Snapshot:
 Wenn ein PDF erzeugt wird, bleiben Vorlage, Vertragsdaten und Branding in dieser
 Version eingefroren.
+
+## Aktueller Backend-Stand
+
+Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt.
+Es gibt noch keine Dokument-HTTP-Endpunkte und noch keine PDF-Erzeugung.
+`openapi.yaml` bleibt deshalb unveraendert.
+
+Angelegt sind:
+
+- `document_templates`: Vorlagen mit `name`, `document_type`,
+  `template_type`, `locale`, `version`, `status`, `content`, `placeholders`,
+  `metadata` und optionalem `created_by_id`
+- `documents`: generische Dokumentakte mit polymorphem `documentable`,
+  optionaler Vorlage, `document_type`, Dokumentstatus, Titel und Metadaten
+- `document_versions`: versionierte Snapshots mit `version_number`, Status,
+  Inhaltssnapshot, Template-Snapshot, Datensnapshot, Metadaten,
+  `generated_by_id` und `generated_at`
+- `document_files`: Storage-Metadaten fuer Dateien einer Dokumentversion,
+  z. B. erzeugtes PDF, unterschriebener Upload oder Anhang
+
+`RentalAgreement` hat eine polymorphe `documents`-Relation. Dadurch kann ein
+Mietvertrag Dokumente bekommen, ohne PDF-Pfade oder Dokument-Interna direkt im
+Mietvertrag zu speichern.
 
 ## Modulgrenzen
 
@@ -289,16 +311,19 @@ sein:
 
 ## Erste Backend-Umsetzung
 
-Ein sinnvoller erster Backend-Schritt waere:
+Der erste Backend-Schritt ist umgesetzt:
 
 1. Modulare Documents-Struktur im bestehenden Laravel-Projekt anlegen.
 2. Tabelle und Modell fuer `DocumentTemplate`.
 3. Tabelle und Modell fuer `Document`.
-4. Tabelle und Modell fuer `DocumentVersion` oder `DocumentFile`.
-5. Ein Standard-Mustermietvertrag als Seed-Daten.
-6. PDF-Erzeugung aus Vorlage und Mietvertragsdaten.
-7. Download-Endpunkt fuer erzeugte PDFs.
-8. Upload-Endpunkt fuer unterschriebene Versionen.
+4. Tabellen und Modelle fuer `DocumentVersion` und `DocumentFile`.
+
+Naechste sinnvolle Backend-Schritte:
+
+1. Ein Standard-Mustermietvertrag als Seed-Daten.
+2. PDF-Erzeugung aus Vorlage und Mietvertragsdaten.
+3. Download-Endpunkt fuer erzeugte PDFs.
+4. Upload-Endpunkt fuer unterschriebene Versionen.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei

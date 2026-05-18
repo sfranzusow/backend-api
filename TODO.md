@@ -11,10 +11,10 @@
 - API-Dokumentation für Frontend-Übergabe aktualisiert: `docs/openapi.yaml` und `docs/api-overview.md`.
 - Vorhaben für Vertragsdokumente, PDF-Erzeugung, Vorlagen, Branding und einfachen Unterschriften-Upload dokumentiert: `docs/rental-agreement-documents.md`.
 - Architekturentscheidung festgehalten: Documents als generisches internes Modul planen, damit es später in ein eigenes Repository oder Paket herausgelöst werden kann.
+- Generische Documents-Struktur angelegt: `DocumentTemplate`, `Document`, `DocumentVersion`, `DocumentFile`.
 
 ### Nächste mögliche Schritte
 
-- Generische Documents-Struktur planen: `DocumentTemplate`, `Document`, `DocumentVersion`/`DocumentFile`.
 - Vertragsdokument/PDF aus Vorlage erzeugen.
 - Workflow weiter ausbauen: Entwurf, Aktivierung, Beendigung, Kündigung.
 - Einfachen Upload für unterschriebene Dokumente bauen.

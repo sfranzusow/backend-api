@@ -13,6 +13,7 @@ Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 - `properties`: Immobilien bzw. Einheiten
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
 - `rental_agreements`: echte Mietvertraege zwischen Vermieter und Mieter
+- `document_templates`, `documents`, `document_versions`, `document_files`: interne Documents-Datenbasis fuer spaetere Vertragsdokumente
 
 Wichtig ist die Trennung zwischen:
 
@@ -131,8 +132,9 @@ Wichtige Validierungsregeln fuer das Frontend:
 
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
 [`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
-beschrieben. Die dort genannten Dokument-Endpunkte sind noch nicht implementiert
-und stehen deshalb noch nicht in `openapi.yaml`.
+beschrieben. Die generische Datenbasis fuer Documents ist angelegt. Die dort
+genannten Dokument-Endpunkte sind noch nicht implementiert und stehen deshalb
+noch nicht in `openapi.yaml`.
 
 ## Rechte nach Rolle
 
