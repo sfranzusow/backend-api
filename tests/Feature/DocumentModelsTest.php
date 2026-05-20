@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\DocumentReminder;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\RentalAgreement;
@@ -84,6 +85,32 @@ class DocumentModelsTest extends TestCase
         ], $version->data_snapshot);
         $this->assertCount(1, $version->files);
         $this->assertTrue($file->version->is($version));
+    }
+
+    public function test_documents_can_have_deadline_reminders(): void
+    {
+        $document = Document::factory()->create();
+        $creator = User::factory()->create();
+        $assignee = User::factory()->create();
+
+        $reminder = DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'title' => 'Unterschrift prüfen',
+            'due_at' => '2026-06-15 10:00:00',
+            'remind_at' => '2026-06-10 10:00:00',
+            'created_by_id' => $creator->id,
+            'assigned_to_id' => $assignee->id,
+        ]);
+
+        $document->load('reminders');
+        $reminder->load(['document', 'creator', 'assignee']);
+
+        $this->assertCount(1, $document->reminders);
+        $this->assertTrue($document->reminders->first()->is($reminder));
+        $this->assertTrue($reminder->document->is($document));
+        $this->assertTrue($reminder->creator->is($creator));
+        $this->assertTrue($reminder->assignee->is($assignee));
+        $this->assertSame(DocumentReminder::STATUS_PENDING, $reminder->status);
     }
 
     public function test_document_version_numbers_are_unique_per_document(): void

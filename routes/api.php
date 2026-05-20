@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\DocumentReminderController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyMemberController;
 use App\Http\Controllers\Api\RentalAgreementController;
@@ -36,4 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/documents/{document}/download', [DocumentController::class, 'download']);
     Route::post('/documents/{document}/signed-upload', [DocumentController::class, 'signedUpload']);
     Route::get('/documents/{document}/signed-download', [DocumentController::class, 'signedDownload']);
+    Route::get('/documents/{document}/reminders', [DocumentReminderController::class, 'index']);
+    Route::post('/documents/{document}/reminders', [DocumentReminderController::class, 'store']);
+    Route::patch('/document-reminders/{document_reminder}', [DocumentReminderController::class, 'update']);
+    Route::delete('/document-reminders/{document_reminder}', [DocumentReminderController::class, 'destroy']);
 });

@@ -1312,6 +1312,140 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /documents/{document}/reminders:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Fristen und Erinnerungen eines Dokuments auflisten
+      description: |
+        Listet Reminder zur Dokumentakte, z. B. fehlende Unterschrift oder
+        Wiedervorlage. Es gilt dieselbe Leseberechtigung wie bei
+        `GET /documents/{document}`.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentReminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Documents]
+      summary: Frist oder Erinnerung für Dokument anlegen
+      description: |
+        Legt eine neue Erinnerung im Status `pending` an. Erlaubt für `admin`
+        oder den zugeordneten `landlord`, der das zugehörige Objekt verwaltet.
+        `tenant` darf Erinnerungen lesen, aber nicht anlegen.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreDocumentReminderRequest'
+      responses:
+        '201':
+          description: Erinnerung angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentReminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /document-reminders/{documentReminder}:
+    parameters:
+      - name: documentReminder
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Documents]
+      summary: Frist oder Erinnerung aktualisieren
+      description: |
+        Aktualisiert Titel, Notizen, Fälligkeit, Erinnerungszeit, Zuweisung,
+        Metadaten oder Status. Beim Wechsel auf `done` setzt der Server
+        `completed_at`, wenn kein eigener Wert übergeben wird.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentReminderRequest'
+      responses:
+        '200':
+          description: Erinnerung aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentReminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Documents]
+      summary: Frist oder Erinnerung löschen
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     sanctumBearer:
@@ -2305,6 +2439,58 @@ components:
           type: string
           format: date-time
 
+    DocumentReminder:
+      type: object
+      required: [id, document_id, title, due_at, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        title:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+        remind_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [pending, done, cancelled]
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        assigned_to_id:
+          type: integer
+          nullable: true
+        assignee:
+          allOf:
+            - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        created_by_id:
+          type: integer
+          nullable: true
+        creator:
+          allOf:
+            - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     Document:
       type: object
       required: [id, documentable_type, documentable_id, document_type, status, created_at, updated_at]
@@ -2340,6 +2526,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/DocumentVersion'
           nullable: true
+        reminders:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentReminder'
         created_by_id:
           type: integer
           nullable: true
@@ -2391,6 +2581,68 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+
+    StoreDocumentReminderRequest:
+      type: object
+      required: [title, due_at]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: Unterschrift prüfen
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+          example: '2026-06-15T10:00:00Z'
+        remind_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Muss vor oder gleich `due_at` liegen.
+          example: '2026-06-10T10:00:00Z'
+        assigned_to_id:
+          type: integer
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    UpdateDocumentReminderRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+        due_at:
+          type: string
+          format: date-time
+        remind_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [pending, done, cancelled]
+        assigned_to_id:
+          type: integer
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
 
     ValidationError:
       type: object

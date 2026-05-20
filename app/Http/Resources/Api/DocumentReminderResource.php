@@ -5,7 +5,7 @@ namespace App\Http\Resources\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class DocumentResource extends JsonResource
+class DocumentReminderResource extends JsonResource
 {
     public static $wrap = null;
 
@@ -16,18 +16,18 @@ class DocumentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'documentable_type' => class_basename($this->documentable_type),
-            'documentable_id' => $this->documentable_id,
-            'document_template_id' => $this->document_template_id,
-            'document_type' => $this->document_type,
-            'status' => $this->status,
+            'document_id' => $this->document_id,
             'title' => $this->title,
+            'notes' => $this->notes,
+            'due_at' => $this->due_at?->toISOString(),
+            'remind_at' => $this->remind_at?->toISOString(),
+            'status' => $this->status,
             'metadata' => $this->metadata,
-            'template' => DocumentTemplateResource::make($this->whenLoaded('template')),
-            'latest_version' => DocumentVersionResource::make($this->whenLoaded('latestVersion')),
-            'reminders' => DocumentReminderResource::collection($this->whenLoaded('reminders')),
+            'assigned_to_id' => $this->assigned_to_id,
+            'assignee' => UserResource::make($this->whenLoaded('assignee')),
             'created_by_id' => $this->created_by_id,
             'creator' => UserResource::make($this->whenLoaded('creator')),
+            'completed_at' => $this->completed_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

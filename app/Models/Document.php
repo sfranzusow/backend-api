@@ -93,6 +93,13 @@ class Document extends Model
         return $this->hasOne(DocumentVersion::class)->latestOfMany('version_number');
     }
 
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(DocumentReminder::class)
+            ->orderBy('due_at')
+            ->orderBy('id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');

@@ -13,7 +13,7 @@ Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 - `properties`: Immobilien bzw. Einheiten
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
 - `rental_agreements`: echte Mietvertraege zwischen Vermieter und Mieter
-- `document_templates`, `documents`, `document_versions`, `document_files`: interne Documents-Datenbasis fuer spaetere Vertragsdokumente
+- `document_templates`, `documents`, `document_versions`, `document_files`, `document_reminders`: interne Documents-Datenbasis fuer Vertragsdokumente, Dateien und Fristen
 
 Wichtig ist die Trennung zwischen:
 
@@ -149,6 +149,10 @@ heruntergeladen werden.
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
+- `GET /documents/{document}/reminders`: Fristen/Erinnerungen eines Dokuments listen
+- `POST /documents/{document}/reminders`: Frist/Erinnerung anlegen
+- `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
+- `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
 
 Beim Anlegen gilt:
 
@@ -179,17 +183,24 @@ Beim Upload gilt:
 - die Datei wird als `DocumentFile` mit `file_type=signed_upload` gespeichert
 - `Document.status` und `DocumentVersion.status` werden auf `signed_uploaded` gesetzt
 
+Bei Fristen und Erinnerungen gilt:
+
+- Reminder gehoeren zu einer `Document`-Akte, nicht direkt zum Mietvertrag
+- ein Reminder hat `title`, `due_at`, optional `remind_at`, `assigned_to_id`, `metadata` und Status
+- erlaubte Reminder-Status sind `pending`, `done`, `cancelled`
+- beim Wechsel auf `done` setzt der Server `completed_at`, wenn kein eigener Wert uebergeben wird
+- `tenant` darf Erinnerungen eigener Mietvertraege sehen, aber nicht anlegen, aendern oder loeschen
+
 Berechtigungen:
 
-- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen
-- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
-- `tenant` darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen und eine unterschriebene Datei hochladen, aber keine Dokumentakte anlegen oder PDF-Version erzeugen
+- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen, herunterladen und Erinnerungen verwalten
+- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen, herunterladen und Erinnerungen verwalten, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- `tenant` darf Dokumente, erzeugte PDFs, unterschriebene Uploads und Erinnerungen eigener Mietvertraege sehen/herunterladen und eine unterschriebene Datei hochladen, aber keine Dokumentakte anlegen, PDF-Version erzeugen oder Erinnerung verwalten
 - `user` hat keinen Zugriff
 
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
 [`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
 beschrieben. Die implementierten Dokument-Endpunkte stehen in `openapi.yaml`.
-Weitere Workflow-Aktionen wie Verwerfen oder Freigabe sind noch Folgepakete.
 
 ## Rechte nach Rolle
 
@@ -226,6 +237,7 @@ Einschraenkungen:
 - darf neue Adressen anlegen
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
 - darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- darf Fristen/Erinnerungen fuer diese Dokumente verwalten
 
 ### Tenant
 
@@ -241,6 +253,7 @@ Einschraenkungen:
 - darf eigene Mietvertraege sehen
 - darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen
 - darf fuer eigene Mietvertraege eine unterschriebene Datei hochladen
+- darf Fristen/Erinnerungen eigener Dokumente sehen, aber nicht verwalten
 
 ### User
 

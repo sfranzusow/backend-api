@@ -53,6 +53,7 @@ Zusatzlich soll es generische Dokument-Konzepte geben:
 - `Document`: konkrete Dokumentakte zu einem fachlichen Objekt
 - `DocumentVersion`: konkrete erzeugte Version, z. B. ein PDF-Snapshot
 - `DocumentFile`: gespeicherte Datei, z. B. Original-PDF oder unterschriebener Upload
+- `DocumentReminder`: Frist oder Wiedervorlage zu einer Dokumentakte
 
 Ein Mietvertragsdokument ist dann nur ein Spezialfall:
 
@@ -71,7 +72,8 @@ Version eingefroren.
 Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
 inklusive HTTP-Endpunkten fuer Dokument-Metadaten, PDF-Erzeugung, Download und
 Upload/Download unterschriebener Dokumentdateien. Dokumente koennen ausserdem
-freigegeben oder verworfen werden. Die technische API ist in `openapi.yaml`
+freigegeben oder verworfen werden. Fristen und Erinnerungen koennen an eine
+Dokumentakte gehaengt werden. Die technische API ist in `openapi.yaml`
 dokumentiert.
 
 Angelegt sind:
@@ -86,6 +88,8 @@ Angelegt sind:
   `generated_by_id` und `generated_at`
 - `document_files`: Storage-Metadaten fuer Dateien einer Dokumentversion,
   z. B. erzeugtes PDF, unterschriebener Upload oder Anhang
+- `document_reminders`: Fristen/Wiedervorlagen mit `due_at`, optionalem
+  `remind_at`, Status, Zuweisung und Metadaten
 
 `RentalAgreement` hat eine polymorphe `documents`-Relation. Dadurch kann ein
 Mietvertrag Dokumente bekommen, ohne PDF-Pfade oder Dokument-Interna direkt im
@@ -102,6 +106,10 @@ Aktuell implementierte Endpunkte:
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
+- `GET /documents/{document}/reminders`: Fristen/Erinnerungen listen
+- `POST /documents/{document}/reminders`: Frist/Erinnerung anlegen
+- `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
+- `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
 
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
 Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
@@ -110,6 +118,10 @@ mit `file_type=generated_pdf` gespeichert. Beim Upload wird eine Datei als
 Status von `Document` und `DocumentVersion` auf `signed_uploaded` gesetzt.
 `void` ist final; verworfene Versionen werden nicht mehr per Download
 ausgeliefert.
+
+Reminder sind zunaechst sichtbare Workflow-Hilfen. Sie haben die Status
+`pending`, `done` und `cancelled`; eine automatische Benachrichtigung per Job
+ist noch nicht Teil des Pakets.
 
 ## Modulgrenzen
 
@@ -135,12 +147,13 @@ Geplante Kernverantwortungen:
 - `DocumentFile`: konkrete Dateien im Storage
 - `DocumentGenerator`: erzeugt Dokumentversionen aus Vorlage und Daten
 - `DocumentRenderer`: rendert HTML/PDF aus Snapshot-Daten
+- `DocumentReminder`: haelt Fristen und Wiedervorlagen an der Dokumentakte
 
-Die Rental-Agreement-Seite sollte nur eine klare Schnittstelle nutzen. Aktuell
-liegt die erste Generate-Aktion noch im API-Controller; bei weiterem Ausbau
-sollte sie in einen Documents-Service wie `DocumentGenerator` verschoben werden.
-Die konkrete PDF-Erzeugung, Storage-Pfade und Upload-Regeln bleiben im
-Documents-Modul.
+Die Rental-Agreement-Seite sollte nur eine klare Schnittstelle nutzen. Die
+Workflow-Logik fuer Erzeugen, Freigeben, Verwerfen und Upload liegt im
+Documents-Service; der API-Controller bleibt duenn und uebersetzt nur HTTP in
+Modulaufrufe. Die konkrete PDF-Erzeugung, Storage-Pfade und Upload-Regeln
+bleiben im Documents-Modul.
 
 ## Warum Snapshot?
 
@@ -306,6 +319,10 @@ implementiert.
 - `GET /documents/{document}/download`: implementiert fuer erzeugtes PDF
 - `POST /documents/{document}/signed-upload`: implementiert fuer unterschriebene Uploads
 - `GET /documents/{document}/signed-download`: implementiert fuer unterschriebene Uploads
+- `GET /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `POST /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `PATCH /document-reminders/{documentReminder}`: implementiert fuer Fristen/Erinnerungen
+- `DELETE /document-reminders/{documentReminder}`: implementiert fuer Fristen/Erinnerungen
 
 Fuer eine HTML-Vorschau kann spaeter zusaetzlich ein Preview-Endpunkt sinnvoll
 sein:
@@ -348,13 +365,14 @@ Die ersten Backend-Schritte sind umgesetzt:
 7. PDF-Snapshot per API erzeugen und herunterladen.
 8. Unterschriebene Datei hochladen und herunterladen.
 9. Dokumentworkflow fuer Freigabe, Verwerfen und Statusuebergaenge schaerfen.
+10. Fristen/Erinnerungen an Dokumentakten modellieren und per API verwalten.
 
 Naechste sinnvolle Backend-Schritte:
 
 1. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
 2. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
 3. Optional eine Template-API fuer Admins ergaenzen.
-4. Fristen und Erinnerungen fuer fehlende Unterschriften modellieren.
+4. Faellige Reminder spaeter per Command/Job automatisch melden.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
@@ -445,13 +463,21 @@ Implementierte API:
 Ziel: Relevante Termine sollen im System sichtbar und spaeter automatisiert
 erinnerbar sein.
 
-Geplanter Umfang:
+Umgesetzt:
 
-- Erinnerungsfaelle definieren, z. B. fehlende Unterschrift, Vertragsbeginn,
-  Vertragsende, Kuendigungsfrist
-- Datenmodell fuer Reminder oder geplante Aktionen festlegen
-- Artisan Command oder Job fuer faellige Erinnerungen
-- Tests fuer faellige und nicht faellige Erinnerungen
+- `DocumentReminder` als generisches Reminder-Modell an der Dokumentakte
+- Felder fuer Titel, Notizen, `due_at`, optionales `remind_at`, Status,
+  Zuweisung, Metadaten und Abschlusszeitpunkt
+- API zum Listen, Anlegen, Aktualisieren und Loeschen
+- Berechtigungen: Admin und berechtigter Vermieter verwalten; eigener Mieter
+  kann lesen
+- Tests fuer API, Berechtigungen, Validierung und Modellrelationen
+
+Noch offen:
+
+- Artisan Command oder Job fuer faellige automatische Benachrichtigungen
+- fachliche Standard-Reminder, z. B. beim Teilen eines Dokuments automatisch
+  eine Unterschriftsfrist anlegen
 
 ### Paket 7: Kaution und Zahlungen
 
