@@ -28,6 +28,14 @@ class DocumentReminderPolicy
 
     public function view(User $authUser, DocumentReminder $documentReminder): bool
     {
+        if (
+            $authUser->hasRole(RoleName::Tenant->value)
+            && ! $authUser->hasRole(RoleName::Landlord->value)
+        ) {
+            return $documentReminder->assigned_to_id === $authUser->id
+                && $authUser->can('view', $documentReminder->document);
+        }
+
         return $authUser->can('view', $documentReminder->document);
     }
 

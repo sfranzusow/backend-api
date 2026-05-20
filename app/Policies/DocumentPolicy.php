@@ -31,7 +31,14 @@ class DocumentPolicy
         $documentable = $document->documentable;
 
         if ($documentable instanceof RentalAgreement) {
-            return $authUser->can('view', $documentable);
+            if ($authUser->hasRole(RoleName::Landlord->value)) {
+                return $documentable->landlord_id === $authUser->id;
+            }
+
+            if ($authUser->hasRole(RoleName::Tenant->value)) {
+                return $document->isVisibleToTenant()
+                    && $documentable->tenant_id === $authUser->id;
+            }
         }
 
         return false;
@@ -75,7 +82,16 @@ class DocumentPolicy
 
     public function uploadSigned(User $authUser, Document $document): bool
     {
-        return $this->view($authUser, $document);
+        if ($authUser->hasRole(RoleName::Landlord->value)) {
+            return $this->update($authUser, $document);
+        }
+
+        if ($authUser->hasRole(RoleName::Tenant->value)) {
+            return $document->status === Document::STATUS_SHARED
+                && $this->view($authUser, $document);
+        }
+
+        return $this->update($authUser, $document);
     }
 
     public function downloadSigned(User $authUser, Document $document): bool

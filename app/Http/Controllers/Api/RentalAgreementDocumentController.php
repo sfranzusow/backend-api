@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreRentalAgreementDocumentRequest;
 use App\Http\Resources\Api\DocumentResource;
@@ -17,8 +18,15 @@ class RentalAgreementDocumentController extends Controller
     {
         $this->authorize('view', $rentalAgreement);
 
+        $authUser = $request->user();
+        $limitToTenantVisibleStatuses = $authUser?->hasRole(RoleName::Tenant->value) === true
+            && ! $authUser->hasRole(RoleName::Landlord->value);
+
         $documents = $rentalAgreement->documents()
             ->with(['template', 'latestVersion.files', 'creator:id,name,email'])
+            ->when($limitToTenantVisibleStatuses, function ($query) {
+                $query->whereIn('status', Document::tenantVisibleStatuses());
+            })
             ->latest('id')
             ->get();
 

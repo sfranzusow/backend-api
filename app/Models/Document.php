@@ -28,6 +28,11 @@ class Document extends Model
 
     public const STATUS_VOID = 'void';
 
+    private const TENANT_VISIBLE_STATUSES = [
+        self::STATUS_SHARED,
+        self::STATUS_SIGNED_UPLOADED,
+    ];
+
     private const STATUS_TRANSITIONS = [
         self::STATUS_DRAFT => [self::STATUS_DRAFT, self::STATUS_GENERATED, self::STATUS_VOID],
         self::STATUS_GENERATED => [self::STATUS_GENERATED, self::STATUS_SHARED, self::STATUS_SIGNED_UPLOADED, self::STATUS_VOID],
@@ -66,6 +71,19 @@ class Document extends Model
             self::STATUS_SIGNED_UPLOADED,
             self::STATUS_VOID,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function tenantVisibleStatuses(): array
+    {
+        return self::TENANT_VISIBLE_STATUSES;
+    }
+
+    public function isVisibleToTenant(): bool
+    {
+        return in_array($this->status, self::TENANT_VISIBLE_STATUSES, true);
     }
 
     public function canTransitionToStatus(string $status): bool

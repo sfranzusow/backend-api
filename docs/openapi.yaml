@@ -949,7 +949,10 @@ paths:
       description: |
         `admin` darf alle Dokumente sehen.
         `landlord` sieht Dokumente eigener Mietverträge.
-        `tenant` sieht Dokumente eigener Mietverträge.
+        `tenant` sieht nur freigegebene oder unterschrieben hochgeladene
+        Dokumente eigener Mietverträge (`shared`, `signed_uploaded`).
+        Entwürfe, nur erzeugte und verworfene Dokumente bleiben tenant-seitig
+        verborgen.
         Erzeugte Versionen und Dateien werden als `latest_version` mitgeliefert.
       security:
         - sanctumBearer: []
@@ -1214,6 +1217,9 @@ paths:
         Zeigt ein einzelnes Dokument, wenn der authentifizierte Benutzer das
         verknüpfte Fachobjekt sehen darf. Für Mietvertragsdokumente gilt also
         dieselbe Leseberechtigung wie beim Mietvertrag.
+
+        Für `tenant` ist die Dokument-Sicht zusätzlich an den Dokumentstatus
+        gebunden: sichtbar sind nur `shared` und `signed_uploaded`.
       security:
         - sanctumBearer: []
       responses:
@@ -1251,8 +1257,8 @@ paths:
         mit `file_type=generated_pdf` verknüpft.
 
         Erlaubt für `admin` oder den zugeordneten `landlord`, der das zugehörige
-        Objekt als Vermieter verwaltet. `tenant` darf erzeugte PDFs herunterladen,
-        aber keine neuen Versionen erzeugen.
+        Objekt als Vermieter verwaltet. `tenant` darf erst freigegebene PDFs
+        herunterladen, aber keine neuen Versionen erzeugen.
 
         Ein bereits erzeugtes Dokument kann erneut erzeugt werden; die vorherige
         neueste Version wird dabei auf `void` gesetzt. Dokumente im Status
@@ -1422,8 +1428,9 @@ paths:
         Uploads sind nur für Dokumente in `generated`, `shared` oder bereits
         `signed_uploaded` möglich. `void` ist final.
 
-        Erlaubt für Benutzer, die das verknüpfte Dokument sehen dürfen,
-        z. B. `admin`, zugeordneter `landlord` oder eigener `tenant`.
+        `admin` und zugeordneter `landlord` dürfen im gültigen Workflow hochladen.
+        `tenant` darf nur für eigene freigegebene Dokumente (`shared`) eine
+        unterschriebene Datei hochladen.
       security:
         - sanctumBearer: []
       requestBody:
@@ -1514,6 +1521,9 @@ paths:
         Listet Reminder zur Dokumentakte, z. B. fehlende Unterschrift oder
         Wiedervorlage. Es gilt dieselbe Leseberechtigung wie bei
         `GET /documents/{document}`.
+
+        `tenant` erhält nur Reminder, die ihm selbst über `assigned_to_id`
+        zugewiesen sind. Interne Vermieter-Wiedervorlagen bleiben verborgen.
       security:
         - sanctumBearer: []
       responses:
@@ -2785,6 +2795,9 @@ components:
             - $ref: '#/components/schemas/DocumentVersion'
           nullable: true
         reminders:
+          description: |
+            Für `admin` und berechtigten `landlord` alle geladenen Reminder.
+            Für `tenant` nur die eigenen zugewiesenen Reminder.
           type: array
           items:
             $ref: '#/components/schemas/DocumentReminder'

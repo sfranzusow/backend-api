@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreDocumentReminderRequest;
 use App\Http\Requests\Api\UpdateDocumentReminderRequest;
@@ -9,16 +10,24 @@ use App\Http\Resources\Api\DocumentReminderResource;
 use App\Models\Document;
 use App\Models\DocumentReminder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class DocumentReminderController extends Controller
 {
-    public function index(Document $document): JsonResponse
+    public function index(Request $request, Document $document): JsonResponse
     {
         $this->authorize('view', $document);
 
+        $authUser = $request->user();
+        $limitToAssignedTenant = $authUser?->hasRole(RoleName::Tenant->value) === true
+            && ! $authUser->hasRole(RoleName::Landlord->value);
+
         $reminders = $document->reminders()
             ->with(['creator:id,name,email', 'assignee:id,name,email'])
+            ->when($limitToAssignedTenant, function ($query) use ($authUser) {
+                $query->where('assigned_to_id', $authUser->id);
+            })
             ->get();
 
         return response()->json([

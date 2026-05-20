@@ -210,6 +210,8 @@ Beim Workflow gilt:
 - `POST /documents/{document}/share` setzt `generated` auf `shared`
 - `POST /documents/{document}/void` setzt das Dokument und die neueste Version auf `void`
 - `void` ist final; Downloads, Uploads und erneute Erzeugung liefern dann keinen neuen Workflow-Fortschritt mehr
+- `tenant` sieht Dokumente erst ab `shared` oder `signed_uploaded`; `draft`,
+  `generated` und `void` bleiben in Mieter-Responses verborgen
 
 Beim Upload gilt:
 
@@ -217,6 +219,9 @@ Beim Upload gilt:
 - erlaubt sind PDF, JPG, JPEG und PNG bis 10 MB
 - die Datei wird als `DocumentFile` mit `file_type=signed_upload` gespeichert
 - `Document.status` und `DocumentVersion.status` werden auf `signed_uploaded` gesetzt
+- `tenant` darf eine unterschriebene Datei nur bei eigenen freigegebenen
+  Dokumenten (`shared`) hochladen; `landlord` und `admin` folgen dem allgemeinen
+  Dokumentworkflow
 
 Bei Fristen und Erinnerungen gilt:
 
@@ -224,13 +229,17 @@ Bei Fristen und Erinnerungen gilt:
 - ein Reminder hat `title`, `due_at`, optional `remind_at`, `assigned_to_id`, `metadata` und Status
 - erlaubte Reminder-Status sind `pending`, `done`, `cancelled`
 - beim Wechsel auf `done` setzt der Server `completed_at`, wenn kein eigener Wert uebergeben wird
-- `tenant` darf Erinnerungen eigener Mietvertraege sehen, aber nicht anlegen, aendern oder loeschen
+- `tenant` darf nur eigene, ueber `assigned_to_id` zugewiesene Erinnerungen bei
+  sichtbaren Dokumenten sehen, aber nicht anlegen, aendern oder loeschen
 
 Berechtigungen:
 
 - `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen, herunterladen und Erinnerungen verwalten
 - `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen, herunterladen und Erinnerungen verwalten, wenn er das zugehoerige Objekt als Vermieter verwaltet
-- `tenant` darf Dokumente, erzeugte PDFs, unterschriebene Uploads und Erinnerungen eigener Mietvertraege sehen/herunterladen und eine unterschriebene Datei hochladen, aber keine Dokumentakte anlegen, PDF-Version erzeugen oder Erinnerung verwalten
+- `tenant` darf freigegebene oder unterschrieben hochgeladene Dokumente eigener
+  Mietvertraege sehen/herunterladen und bei `shared` eine unterschriebene Datei
+  hochladen, aber keine Dokumentakte anlegen, PDF-Version erzeugen oder
+  Erinnerung verwalten
 - `user` hat keinen Zugriff
 
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
@@ -287,9 +296,9 @@ Einschraenkungen:
 - darf Property-Mitglieder nicht verwalten
 - darf keine Adressen sehen
 - darf eigene Mietvertraege sehen
-- darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen
-- darf fuer eigene Mietvertraege eine unterschriebene Datei hochladen
-- darf Fristen/Erinnerungen eigener Dokumente sehen, aber nicht verwalten
+- darf freigegebene oder unterschrieben hochgeladene Dokumente eigener Mietvertraege sehen/herunterladen
+- darf fuer eigene freigegebene Dokumente eine unterschriebene Datei hochladen
+- darf nur eigene, zugewiesene Fristen/Erinnerungen sichtbarer Dokumente sehen, aber nicht verwalten
 - darf Zahlungen eigener Mietvertraege sehen, aber nicht verwalten
 
 ### User
@@ -310,6 +319,10 @@ Einschraenkungen:
 
 - `tenant` kann ein Property sehen, ohne dass dabei automatisch die zugehoerige Adresse im JSON erscheint
 - Mietvertraege enthalten fuer `tenant` weiterhin das Property, aber die verschachtelte Adresse wird ausgeblendet
+- Dokumentlisten fuer `tenant` enthalten nur `shared` und `signed_uploaded`; das
+  Frontend sollte `generated` nicht als Mieter-verfuegbar interpretieren
+- Reminder in Tenant-Responses sind eine persoenliche Aufgaben-/Hinweisliste,
+  keine vollstaendige Vermieter-Wiedervorlage
 - die Sichtbarkeit von Adressen, Mietvertraegen, Dokumenten und Zahlungen wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
 
 ## Empfehlung fuer das Frontend

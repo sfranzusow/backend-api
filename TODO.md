@@ -18,10 +18,12 @@
 - Paket 5 umgesetzt: Dokumentworkflow mit `share`, `void`, Statusübergängen und Ersetzen alter erzeugter Versionen geschärft.
 - Paket 6 umgesetzt: Fristen/Erinnerungen als `DocumentReminder` an Dokumentakten modelliert und per API verwaltbar gemacht.
 - Paket 7 umgesetzt: generische `Payment`-Struktur für Miete, Kaution, Rückzahlungen und Nebenkosten samt API und Doku ergänzt.
+- Paket 8 erster Schnitt umgesetzt: Mieter sehen Dokumente erst ab `shared`/`signed_uploaded`, dürfen signierte Dateien nur bei freigegebenen Dokumenten hochladen und sehen nur eigene Reminder-Zuweisungen; Vermieter/Admin behalten die vollständige Arbeitsakte.
 
 ### Nächste mögliche Schritte
 
-- Paket 8: Getrennte Mieter- und Vermieter-Sichten weiter verfeinern.
+- Schlanken Neustart-Kontext für Frontend/KI festlegen: zuerst `TODO.md`, dann `docs/api-overview.md`, `docs/openapi.yaml` und bei Bedarf die Modulnotizen.
+- Paket 8 weiter vertiefen: konkrete Response-Beispiele und mögliche Action-Hints für Frontend-Buttons ergänzen.
 
 ### Frontend-Übergabe
 
@@ -30,3 +32,11 @@
 - `docs/rental-agreement-documents.md`: Roadmap für PDF-, Upload-, Signatur- und Dokumentworkflow.
 - `docs/rental-agreement-payments.md`: fachliche Übergabe für Miete, Kaution, Rückzahlungen und Zahlungsstatus.
 - `TODO.md`: kurze Paketliste für die nächste Backend-Planung.
+
+### Neustart-Kontext für KI/Frontend
+
+- Aktueller Stand steht bewusst kompakt in `TODO.md`.
+- Für fachliche Rechte und Rollen `docs/api-overview.md` lesen.
+- Für technische Contracts immer `docs/openapi.yaml` als Quelle nehmen.
+- Für Dokumentworkflow-Entscheidungen `docs/rental-agreement-documents.md` nutzen.
+- Für Payments `docs/rental-agreement-payments.md` nutzen.

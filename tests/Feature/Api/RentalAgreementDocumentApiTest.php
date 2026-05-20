@@ -99,17 +99,33 @@ class RentalAgreementDocumentApiTest extends TestCase
         ]);
     }
 
-    public function test_tenant_can_list_own_rental_agreement_documents(): void
+    public function test_tenant_only_sees_shared_or_signed_documents_for_own_rental_agreement(): void
     {
         $user = User::factory()->create();
         $user->assignRole(RoleName::Tenant->value);
         $agreement = RentalAgreement::factory()->create([
             'tenant_id' => $user->id,
         ]);
-        $matchingDocument = Document::factory()->create([
+        $sharedDocument = Document::factory()->create([
             'documentable_type' => RentalAgreement::class,
             'documentable_id' => $agreement->id,
             'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
+            'title' => 'Freigegebenes Dokument',
+        ]);
+        $signedDocument = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SIGNED_UPLOADED,
+            'title' => 'Unterschriebene Version',
+        ]);
+        $generatedDocument = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+            'title' => 'Nur erzeugtes Dokument',
         ]);
 
         Document::factory()->create();
@@ -117,8 +133,10 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/rental-agreements/'.$agreement->id.'/documents')
             ->assertSuccessful()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $matchingDocument->id);
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment(['id' => $sharedDocument->id])
+            ->assertJsonFragment(['id' => $signedDocument->id])
+            ->assertJsonMissing(['title' => $generatedDocument->title]);
     }
 
     public function test_tenant_cannot_create_document_for_own_rental_agreement(): void
@@ -258,18 +276,31 @@ class RentalAgreementDocumentApiTest extends TestCase
             'documentable_type' => RentalAgreement::class,
             'documentable_id' => $agreement->id,
             'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
         ]);
         $reminder = DocumentReminder::factory()->create([
             'document_id' => $document->id,
             'title' => 'Unterschrift fällig',
             'assigned_to_id' => $user->id,
         ]);
+        $landlordReminder = DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'title' => 'Interne Wiedervorlage',
+        ]);
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/documents/'.$document->id.'/reminders')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $reminder->id);
+            ->assertJsonPath('data.0.id', $reminder->id)
+            ->assertJsonMissing(['title' => $landlordReminder->title]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data.reminders')
+            ->assertJsonPath('data.reminders.0.id', $reminder->id)
+            ->assertJsonMissing(['title' => $landlordReminder->title]);
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/documents/'.$document->id.'/reminders', [
@@ -439,6 +470,46 @@ class RentalAgreementDocumentApiTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertForbidden();
+    }
+
+    public function test_tenant_cannot_access_or_sign_unshared_document_for_own_rental_agreement(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertForbidden();
+
+        $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/download')
+            ->assertForbidden();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id.'/reminders')
+            ->assertForbidden();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => UploadedFile::fake()->create('signed-contract.pdf', 120, 'application/pdf'),
+            ])
             ->assertForbidden();
     }
 
@@ -782,13 +853,26 @@ class RentalAgreementDocumentApiTest extends TestCase
             'documentable_type' => RentalAgreement::class,
             'documentable_id' => $agreement->id,
             'document_type' => 'rental_agreement_contract',
-            'status' => Document::STATUS_GENERATED,
+            'status' => Document::STATUS_SHARED,
         ]);
-        DocumentVersion::factory()->create([
+        $version = DocumentVersion::factory()->create([
             'document_id' => $document->id,
             'version_number' => 1,
-            'status' => DocumentVersion::STATUS_GENERATED,
+            'status' => DocumentVersion::STATUS_SHARED,
         ]);
+        Storage::disk($this->documentsDisk())->put('documents/shared-generated.pdf', '%PDF-1.4 shared');
+        DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+            'disk' => $this->documentsDisk(),
+            'path' => 'documents/shared-generated.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/download')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/documents/'.$document->id.'/signed-upload', [

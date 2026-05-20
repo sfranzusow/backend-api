@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\RoleName;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreSignedDocumentUploadRequest;
 use App\Http\Resources\Api\DocumentResource;
@@ -21,23 +22,21 @@ class DocumentController extends Controller
     /**
      * @var list<string>
      */
-    private const RESPONSE_RELATIONS = [
+    private const BASE_RESPONSE_RELATIONS = [
         'template',
         'latestVersion.files',
         'creator:id,name,email',
-        'reminders.creator:id,name,email',
-        'reminders.assignee:id,name,email',
     ];
 
     public function __construct(
         private DocumentWorkflowService $documents,
     ) {}
 
-    public function show(Document $document): JsonResponse
+    public function show(Request $request, Document $document): JsonResponse
     {
         $this->authorize('view', $document);
 
-        $document->loadMissing(self::RESPONSE_RELATIONS);
+        $document->loadMissing($this->responseRelations($request));
 
         return response()->json([
             'data' => new DocumentResource($document),
@@ -50,25 +49,25 @@ class DocumentController extends Controller
 
         $this->documents->generate($document, $request->user());
 
-        return $this->documentResponse($document, Response::HTTP_CREATED);
+        return $this->documentResponse($request, $document, Response::HTTP_CREATED);
     }
 
-    public function share(Document $document): JsonResponse
+    public function share(Request $request, Document $document): JsonResponse
     {
         $this->authorize('share', $document);
 
         $this->documents->share($document);
 
-        return $this->documentResponse($document);
+        return $this->documentResponse($request, $document);
     }
 
-    public function voidDocument(Document $document): JsonResponse
+    public function voidDocument(Request $request, Document $document): JsonResponse
     {
         $this->authorize('voidDocument', $document);
 
         $this->documents->void($document);
 
-        return $this->documentResponse($document);
+        return $this->documentResponse($request, $document);
     }
 
     public function download(Document $document): StreamedResponse
@@ -106,7 +105,7 @@ class DocumentController extends Controller
             $validated['metadata'] ?? null,
         );
 
-        return $this->documentResponse($document, Response::HTTP_CREATED);
+        return $this->documentResponse($request, $document, Response::HTTP_CREATED);
     }
 
     public function signedDownload(Document $document): StreamedResponse
@@ -126,12 +125,33 @@ class DocumentController extends Controller
         );
     }
 
-    private function documentResponse(Document $document, int $status = Response::HTTP_OK): JsonResponse
+    private function documentResponse(Request $request, Document $document, int $status = Response::HTTP_OK): JsonResponse
     {
-        $document->refresh()->load(self::RESPONSE_RELATIONS);
+        $document->refresh()->load($this->responseRelations($request));
 
         return response()->json([
             'data' => new DocumentResource($document),
         ], $status);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function responseRelations(Request $request): array
+    {
+        $authUser = $request->user();
+        $limitToAssignedTenant = $authUser?->hasRole(RoleName::Tenant->value) === true
+            && ! $authUser->hasRole(RoleName::Landlord->value);
+
+        return [
+            ...self::BASE_RESPONSE_RELATIONS,
+            'reminders' => function ($query) use ($authUser, $limitToAssignedTenant): void {
+                $query
+                    ->with(['creator:id,name,email', 'assignee:id,name,email'])
+                    ->when($limitToAssignedTenant, function ($query) use ($authUser): void {
+                        $query->where('assigned_to_id', $authUser->id);
+                    });
+            },
+        ];
     }
 }

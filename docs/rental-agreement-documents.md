@@ -111,6 +111,19 @@ Aktuell implementierte Endpunkte:
 - `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
 - `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
 
+Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
+
+- Vermieter sehen und verwalten die vollstaendige Dokumentakte eigener
+  Mietvertraege.
+- Mieter sehen Dokumente eigener Mietvertraege erst ab `shared` oder
+  `signed_uploaded`.
+- `draft`, `generated` und `void` werden in Mieter-Listen und bei
+  `GET /documents/{document}` verborgen.
+- Mieter duerfen erzeugte PDFs erst nach Freigabe herunterladen.
+- Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
+- Reminder werden fuer Mieter auf eigene `assigned_to_id`-Zuweisungen
+  reduziert; interne Vermieter-Wiedervorlagen werden nicht ausgeliefert.
+
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
 Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
 mit `file_type=generated_pdf` gespeichert. Beim Upload wird eine Datei als
@@ -295,12 +308,13 @@ Wichtig fuer die UI:
 Frontend-Ablauf fuer Mieter:
 
 1. Mietvertrag ansehen.
-2. Zugehoeriges PDF ansehen oder herunterladen.
+2. Freigegebenes PDF ansehen oder herunterladen.
 3. Falls erlaubt: unterschriebene Version hochladen.
 4. Status der Dokumentversion sehen.
 
 Mieter sollten Vorlagen und Vertragstexte nicht bearbeiten. Sie sehen nur die
-finalisierte Dokumentversion und den Upload-Status.
+freigegebene oder unterschrieben hochgeladene Dokumentversion und den
+Upload-Status.
 
 ## Vorgeschlagene API
 
@@ -497,7 +511,18 @@ Geplanter Umfang:
 Ziel: API-Responses und Berechtigungen sollen die unterschiedlichen
 Frontend-Ansichten klar unterstuetzen.
 
-Geplanter Umfang:
+Umgesetzter erster Backend-Schnitt:
+
+- Mieter sehen nur Dokumente eigener Mietvertraege mit Status `shared` oder
+  `signed_uploaded`.
+- Mieter bekommen fuer `draft`, `generated` und `void` auch bei direktem
+  Dokumentabruf keinen Zugriff.
+- Mieter duerfen erzeugte PDFs erst nach Freigabe herunterladen.
+- Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
+- Mieter sehen bei Dokument-Remindern nur eigene `assigned_to_id`-Zuweisungen.
+- Vermieter- und Admin-Sichten bleiben vollstaendige Arbeitsakten.
+
+Weiterer geplanter Umfang:
 
 - pruefen, welche Felder Mieter in Mietvertrag, Objekt und Dokument sehen duerfen
 - pruefen, welche Dokumentaktionen pro Rolle sichtbar/erlaubt sind
