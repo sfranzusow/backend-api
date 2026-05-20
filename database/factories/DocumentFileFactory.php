@@ -20,11 +20,12 @@ class DocumentFileFactory extends Factory
     public function definition(): array
     {
         $uuid = fake()->uuid();
+        $disk = config('documents.disk');
 
         return [
             'document_version_id' => DocumentVersion::factory(),
             'file_type' => fake()->randomElement(DocumentFile::fileTypes()),
-            'disk' => 'local',
+            'disk' => is_string($disk) && $disk !== '' ? $disk : 'local',
             'path' => 'documents/'.$uuid.'.pdf',
             'original_name' => $uuid.'.pdf',
             'mime_type' => 'application/pdf',

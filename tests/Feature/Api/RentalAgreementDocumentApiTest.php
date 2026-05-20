@@ -13,6 +13,7 @@ use App\Models\User;
 use Database\Seeders\DocumentTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -39,6 +40,8 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->getJson('/api/documents/'.$document->id)->assertUnauthorized();
         $this->postJson('/api/documents/'.$document->id.'/generate')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id.'/download')->assertUnauthorized();
+        $this->postJson('/api/documents/'.$document->id.'/signed-upload')->assertUnauthorized();
+        $this->getJson('/api/documents/'.$document->id.'/signed-download')->assertUnauthorized();
     }
 
     public function test_landlord_can_create_document_for_own_rental_agreement(): void
@@ -199,7 +202,7 @@ class RentalAgreementDocumentApiTest extends TestCase
 
     public function test_landlord_can_generate_and_download_pdf_for_own_rental_agreement_document(): void
     {
-        Storage::fake('local');
+        Storage::fake($this->documentsDisk());
 
         $user = User::factory()->create(['name' => 'Erika Vermieter']);
         $user->assignRole(RoleName::Landlord->value);
@@ -246,8 +249,8 @@ class RentalAgreementDocumentApiTest extends TestCase
 
         $filePath = $response->json('data.latest_version.files.0.path');
 
-        Storage::disk('local')->assertExists($filePath);
-        $this->assertStringStartsWith('%PDF-1.4', Storage::disk('local')->get($filePath));
+        Storage::disk($this->documentsDisk())->assertExists($filePath);
+        $this->assertStringStartsWith('%PDF-1.4', Storage::disk($this->documentsDisk())->get($filePath));
 
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
@@ -261,7 +264,7 @@ class RentalAgreementDocumentApiTest extends TestCase
         ]);
         $this->assertDatabaseHas('document_files', [
             'file_type' => DocumentFile::TYPE_GENERATED_PDF,
-            'disk' => 'local',
+            'disk' => $this->documentsDisk(),
             'path' => $filePath,
             'mime_type' => 'application/pdf',
         ]);
@@ -294,7 +297,7 @@ class RentalAgreementDocumentApiTest extends TestCase
 
     public function test_landlord_can_generate_document_with_seeded_standard_template(): void
     {
-        Storage::fake('local');
+        Storage::fake($this->documentsDisk());
         $this->seed(DocumentTemplateSeeder::class);
 
         $user = User::factory()->create();
@@ -320,7 +323,162 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.latest_version.template_snapshot.name', 'Wohnraummietvertrag Standard')
             ->assertJsonCount(1, 'data.latest_version.files');
 
-        Storage::disk('local')->assertExists($response->json('data.latest_version.files.0.path'));
+        Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
+    }
+
+    public function test_landlord_can_upload_and_download_signed_document_for_own_rental_agreement(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+        $file = UploadedFile::fake()->createWithContent('signed-contract.pdf', '%PDF-1.4 signed contract');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => $file,
+                'metadata' => [
+                    'source' => 'scan',
+                ],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', Document::STATUS_SIGNED_UPLOADED)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_SIGNED_UPLOADED)
+            ->assertJsonPath('data.latest_version.files.0.file_type', DocumentFile::TYPE_SIGNED_UPLOAD)
+            ->assertJsonPath('data.latest_version.files.0.original_name', 'signed-contract.pdf')
+            ->assertJsonPath('data.latest_version.files.0.mime_type', 'application/pdf')
+            ->assertJsonPath('data.latest_version.files.0.uploaded_by_id', $user->id)
+            ->assertJsonPath('data.latest_version.files.0.metadata.source', 'scan');
+
+        $filePath = $response->json('data.latest_version.files.0.path');
+
+        Storage::disk($this->documentsDisk())->assertExists($filePath);
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => Document::STATUS_SIGNED_UPLOADED,
+        ]);
+        $this->assertDatabaseHas('document_versions', [
+            'id' => $version->id,
+            'status' => DocumentVersion::STATUS_SIGNED_UPLOADED,
+        ]);
+        $this->assertDatabaseHas('document_files', [
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_SIGNED_UPLOAD,
+            'path' => $filePath,
+            'original_name' => 'signed-contract.pdf',
+            'uploaded_by_id' => $user->id,
+        ]);
+
+        $download = $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/signed-download')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertSame('%PDF-1.4 signed contract', $download->streamedContent());
+    }
+
+    public function test_tenant_can_upload_signed_document_for_own_rental_agreement(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => UploadedFile::fake()->create('signed-contract.pdf', 120, 'application/pdf'),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', Document::STATUS_SIGNED_UPLOADED)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_SIGNED_UPLOADED);
+
+        Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
+    }
+
+    public function test_signed_document_upload_requires_existing_document_version(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => UploadedFile::fake()->create('signed-contract.pdf', 120, 'application/pdf'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['document']);
+    }
+
+    public function test_signed_document_upload_validates_file_type(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => UploadedFile::fake()->create('malware.exe', 120, 'application/octet-stream'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
     }
 
     private function propertyManagedBy(User $landlord): Property
@@ -329,5 +487,12 @@ class RentalAgreementDocumentApiTest extends TestCase
         $property->users()->attach($landlord->id, ['role' => RoleName::Landlord->value]);
 
         return $property;
+    }
+
+    private function documentsDisk(): string
+    {
+        $disk = config('documents.disk');
+
+        return is_string($disk) && $disk !== '' ? $disk : 'local';
     }
 }

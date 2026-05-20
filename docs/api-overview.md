@@ -136,14 +136,17 @@ Wichtige Validierungsregeln fuer das Frontend:
 ### Dokumente
 
 Die Documents-API verwaltet Dokument-Metadaten und kann fuer
-Mietvertragsdokumente erste PDF-Snapshots aus einer Vorlage erzeugen. Einen
-unterschriebenen Upload gibt es noch nicht.
+Mietvertragsdokumente PDF-Snapshots aus einer Vorlage erzeugen. Unterschriebene
+Dokumentdateien koennen als PDF, Scan oder Foto hochgeladen und wieder
+heruntergeladen werden.
 
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
 - `POST /documents/{document}/generate`: neue Dokumentversion mit PDF erzeugen
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
+- `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
+- `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
 
 Beim Anlegen gilt:
 
@@ -159,17 +162,24 @@ Beim Erzeugen gilt:
 - `Document.status` und `DocumentVersion.status` werden auf `generated` gesetzt
 - die PDF-Datei wird als `DocumentFile` mit `file_type=generated_pdf` gespeichert
 
+Beim Upload gilt:
+
+- es muss bereits eine Dokumentversion geben
+- erlaubt sind PDF, JPG, JPEG und PNG bis 10 MB
+- die Datei wird als `DocumentFile` mit `file_type=signed_upload` gespeichert
+- `Document.status` und `DocumentVersion.status` werden auf `signed_uploaded` gesetzt
+
 Berechtigungen:
 
-- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen und herunterladen
-- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
-- `tenant` darf Dokumente und erzeugte PDFs eigener Mietvertraege sehen/herunterladen, aber nicht anlegen oder erzeugen
+- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen
+- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- `tenant` darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen und eine unterschriebene Datei hochladen, aber keine Dokumentakte anlegen oder PDF-Version erzeugen
 - `user` hat keinen Zugriff
 
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
 [`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
 beschrieben. Die implementierten Dokument-Endpunkte stehen in `openapi.yaml`.
-Unterschriebene Uploads sind noch ein Folgepaket.
+Weitere Workflow-Aktionen wie Verwerfen oder Freigabe sind noch Folgepakete.
 
 ## Rechte nach Rolle
 
@@ -205,7 +215,7 @@ Einschraenkungen:
 - darf Adressen eigener Objekte sehen, aendern und loeschen
 - darf neue Adressen anlegen
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
-- darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 
 ### Tenant
 
@@ -219,7 +229,8 @@ Einschraenkungen:
 - darf Property-Mitglieder nicht verwalten
 - darf keine Adressen sehen
 - darf eigene Mietvertraege sehen
-- darf Dokumente und erzeugte PDFs eigener Mietvertraege sehen/herunterladen
+- darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen
+- darf fuer eigene Mietvertraege eine unterschriebene Datei hochladen
 
 ### User
 

@@ -69,9 +69,9 @@ Version eingefroren.
 ## Aktueller Backend-Stand
 
 Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
-inklusive HTTP-Endpunkten fuer Dokument-Metadaten, erste PDF-Erzeugung und
-Download. Uploads fuer unterschriebene Dokumente sind noch nicht implementiert.
-Die technische API ist in `openapi.yaml` dokumentiert.
+inklusive HTTP-Endpunkten fuer Dokument-Metadaten, PDF-Erzeugung, Download und
+Upload/Download unterschriebener Dokumentdateien. Die technische API ist in
+`openapi.yaml` dokumentiert.
 
 Angelegt sind:
 
@@ -97,10 +97,14 @@ Aktuell implementierte Endpunkte:
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
 - `POST /documents/{document}/generate`: Snapshot-Version und PDF aus Vorlage erzeugen
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
+- `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
+- `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
 
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
 Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
-mit `file_type=generated_pdf` gespeichert.
+mit `file_type=generated_pdf` gespeichert. Beim Upload wird eine Datei als
+`file_type=signed_upload` an die neueste Dokumentversion gehaengt und der
+Status von `Document` und `DocumentVersion` auf `signed_uploaded` gesetzt.
 
 ## Modulgrenzen
 
@@ -282,9 +286,9 @@ finalisierte Dokumentversion und den Upload-Status.
 
 ## Vorgeschlagene API
 
-Diese Liste beschreibt die Richtung fuer Backend und Frontend. Die ersten
-Metadaten-Endpunkte sind bereits implementiert, PDF- und Upload-Endpunkte noch
-nicht.
+Diese Liste beschreibt die Richtung fuer Backend und Frontend. Metadaten-,
+PDF- und Upload-Endpunkte fuer den einfachen Dokumentworkflow sind bereits
+implementiert.
 
 - `GET /document-templates`: Vorlagenliste
 - `GET /document-templates/{template}`: Vorlage anzeigen
@@ -293,8 +297,8 @@ nicht.
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
 - `POST /documents/{document}/generate`: implementiert fuer erste Snapshot-/PDF-Erzeugung
 - `GET /documents/{document}/download`: implementiert fuer erzeugtes PDF
-- `POST /documents/{document}/signed-upload`: unterschriebene Version hochladen
-- `GET /documents/{document}/signed-download`: unterschriebene Version herunterladen
+- `POST /documents/{document}/signed-upload`: implementiert fuer unterschriebene Uploads
+- `GET /documents/{document}/signed-download`: implementiert fuer unterschriebene Uploads
 - `POST /documents/{document}/void`: Dokumentversion verwerfen
 
 Fuer eine HTML-Vorschau kann spaeter zusaetzlich ein Preview-Endpunkt sinnvoll
@@ -336,13 +340,14 @@ Die ersten Backend-Schritte sind umgesetzt:
 5. Dokument-Metadaten per API an Mietvertraege haengen und abrufen.
 6. Standard-Mietvertragsvorlage bereitstellen.
 7. PDF-Snapshot per API erzeugen und herunterladen.
+8. Unterschriebene Datei hochladen und herunterladen.
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Upload-Endpunkt fuer unterschriebene Versionen.
-2. Download-Endpunkt fuer unterschriebene Dateien.
-3. Dokumentworkflow mit `void`, `shared` und Ersetzen alter Versionen schaerfen.
-4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
+1. Dokumentworkflow mit `void`, `shared` und Ersetzen alter Versionen schaerfen.
+2. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
+3. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
+4. Optional eine Template-API fuer Admins ergaenzen.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
@@ -387,17 +392,16 @@ robuster Renderer hinter den Documents-Schnitt gesetzt werden.
 Ziel: Ein unterschriebenes PDF, Scan oder Foto soll zu einer vorhandenen
 Dokumentversion hochgeladen werden koennen.
 
-Geplanter Umfang:
+Umgesetzt:
 
-- Upload validieren, z. B. MIME-Type, Dateigroesse und erlaubte Dateitypen
+- Upload validieren: PDF, JPG, JPEG, PNG bis 10 MB
 - Datei im Storage ablegen
 - `DocumentFile` mit `file_type=signed_upload` erzeugen
-- `Document.status` und/oder `DocumentVersion.status` auf `signed_uploaded`
-  setzen
-- Berechtigungen klaeren: Vermieter darf hochladen, Mieter optional fuer eigene
-  Mietvertraege
+- `Document.status` und `DocumentVersion.status` auf `signed_uploaded` setzen
+- Berechtigungen: Admin, berechtigter Vermieter und eigener Mieter duerfen
+  unterschriebene Dateien hochladen/herunterladen
 
-Moegliche API:
+Implementierte API:
 
 - `POST /documents/{document}/signed-upload`
 - `GET /documents/{document}/signed-download`

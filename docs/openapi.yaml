@@ -1123,6 +1123,102 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /documents/{document}/signed-upload:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Unterschriebene Dokumentdatei hochladen
+      description: |
+        Lädt eine unterschriebene Datei zur neuesten Dokumentversion hoch.
+        Erlaubt sind PDF, JPG, JPEG und PNG bis 10 MB.
+
+        Nach erfolgreichem Upload werden `Document.status` und
+        `DocumentVersion.status` auf `signed_uploaded` gesetzt. Die Datei wird
+        als `DocumentFile` mit `file_type=signed_upload` gespeichert.
+
+        Erlaubt für Benutzer, die das verknüpfte Dokument sehen dürfen,
+        z. B. `admin`, zugeordneter `landlord` oder eigener `tenant`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoreSignedDocumentUploadRequest'
+      responses:
+        '201':
+          description: Unterschriebene Datei hochgeladen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler oder keine vorhandene Dokumentversion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /documents/{document}/signed-download:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Aktuell hochgeladene unterschriebene Datei herunterladen
+      description: |
+        Liefert die neueste Datei mit `file_type=signed_upload` der neuesten
+        Dokumentversion zurück.
+
+        Es gilt dieselbe Leseberechtigung wie bei `GET /documents/{document}`.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: Unterschriebene Datei
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     sanctumBearer:
@@ -2185,6 +2281,19 @@ components:
           maxLength: 255
           nullable: true
           example: Wohnraummietvertrag
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    StoreSignedDocumentUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PDF, JPG, JPEG oder PNG bis 10 MB.
         metadata:
           type: object
           nullable: true

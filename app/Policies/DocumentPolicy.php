@@ -63,6 +63,16 @@ class DocumentPolicy
         return $this->view($authUser, $document);
     }
 
+    public function uploadSigned(User $authUser, Document $document): bool
+    {
+        return $this->view($authUser, $document);
+    }
+
+    public function downloadSigned(User $authUser, Document $document): bool
+    {
+        return $this->view($authUser, $document);
+    }
+
     public function delete(User $authUser, Document $document): bool
     {
         return $this->update($authUser, $document);

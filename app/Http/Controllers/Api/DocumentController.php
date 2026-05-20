@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreSignedDocumentUploadRequest;
 use App\Http\Resources\Api\DocumentResource;
 use App\Models\Address;
 use App\Models\Document;
@@ -80,14 +81,15 @@ class DocumentController extends Controller
 
             $pdfContents = $this->renderBasicPdf($contentSnapshot);
             $path = 'documents/'.$document->id.'/versions/'.$version->version_number.'/generated.pdf';
+            $disk = $this->documentsDisk();
 
-            if (! Storage::disk('local')->put($path, $pdfContents)) {
+            if (! Storage::disk($disk)->put($path, $pdfContents)) {
                 throw new RuntimeException('The generated PDF could not be stored.');
             }
 
             $version->files()->create([
                 'file_type' => DocumentFile::TYPE_GENERATED_PDF,
-                'disk' => 'local',
+                'disk' => $disk,
                 'path' => $path,
                 'original_name' => 'document-'.$document->id.'-v'.$version->version_number.'.pdf',
                 'mime_type' => 'application/pdf',
@@ -131,6 +133,117 @@ class DocumentController extends Controller
             $file->original_name ?? 'document-'.$document->id.'.pdf',
             ['Content-Type' => $file->mime_type ?? 'application/pdf']
         );
+    }
+
+    public function signedUpload(StoreSignedDocumentUploadRequest $request, Document $document): JsonResponse
+    {
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($request, $document, $validated): void {
+            $version = $document->latestVersion()->lockForUpdate()->first();
+
+            if (
+                ! $version instanceof DocumentVersion
+                || ! in_array($version->status, [
+                    DocumentVersion::STATUS_GENERATED,
+                    DocumentVersion::STATUS_SHARED,
+                    DocumentVersion::STATUS_SIGNED_UPLOADED,
+                ], true)
+            ) {
+                throw ValidationException::withMessages([
+                    'document' => 'A generated document version is required before uploading a signed file.',
+                ]);
+            }
+
+            $uploadedFile = $request->file('file');
+            $uploadedAt = now();
+            $extension = $uploadedFile->extension() ?: $uploadedFile->getClientOriginalExtension();
+            $filename = (string) Str::uuid().($extension !== '' ? '.'.$extension : '');
+            $disk = $this->documentsDisk();
+            $path = Storage::disk($disk)->putFileAs(
+                'documents/'.$document->id.'/versions/'.$version->version_number.'/signed',
+                $uploadedFile,
+                $filename
+            );
+
+            if (! is_string($path)) {
+                throw new RuntimeException('The signed document could not be stored.');
+            }
+
+            $realPath = $uploadedFile->getRealPath();
+
+            if (! is_string($realPath)) {
+                throw new RuntimeException('The signed document checksum could not be calculated.');
+            }
+
+            $checksum = hash_file('sha256', $realPath);
+
+            if (! is_string($checksum)) {
+                throw new RuntimeException('The signed document checksum could not be calculated.');
+            }
+
+            $version->files()->create([
+                'file_type' => DocumentFile::TYPE_SIGNED_UPLOAD,
+                'disk' => $disk,
+                'path' => $path,
+                'original_name' => $uploadedFile->getClientOriginalName(),
+                'mime_type' => $uploadedFile->getMimeType(),
+                'size' => $uploadedFile->getSize(),
+                'checksum' => $checksum,
+                'metadata' => $validated['metadata'] ?? null,
+                'uploaded_by_id' => $request->user()?->id,
+                'uploaded_at' => $uploadedAt,
+            ]);
+
+            $version->forceFill([
+                'status' => DocumentVersion::STATUS_SIGNED_UPLOADED,
+            ])->save();
+
+            $document->forceFill([
+                'status' => Document::STATUS_SIGNED_UPLOADED,
+            ])->save();
+        });
+
+        $document->refresh()->load(['template', 'latestVersion.files', 'creator:id,name,email']);
+
+        return response()->json([
+            'data' => new DocumentResource($document),
+        ], Response::HTTP_CREATED);
+    }
+
+    public function signedDownload(Document $document): StreamedResponse
+    {
+        $this->authorize('downloadSigned', $document);
+
+        $document->loadMissing('latestVersion');
+
+        $file = $document->latestVersion?->files()
+            ->where('file_type', DocumentFile::TYPE_SIGNED_UPLOAD)
+            ->latest('id')
+            ->first();
+
+        if (! $file instanceof DocumentFile || ! Storage::disk($file->disk)->exists($file->path)) {
+            abort(Response::HTTP_NOT_FOUND, 'No signed upload is available for this document.');
+        }
+
+        return Storage::disk($file->disk)->download(
+            $file->path,
+            $file->original_name ?? 'signed-document-'.$document->id,
+            ['Content-Type' => $file->mime_type ?? 'application/octet-stream']
+        );
+    }
+
+    private function documentsDisk(): string
+    {
+        $disk = config('documents.disk');
+
+        if (is_string($disk) && $disk !== '') {
+            return $disk;
+        }
+
+        $defaultDisk = config('filesystems.default');
+
+        return is_string($defaultDisk) && $defaultDisk !== '' ? $defaultDisk : 'local';
     }
 
     private function activeTemplateFor(Document $document): ?DocumentTemplate
