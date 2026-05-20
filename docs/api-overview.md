@@ -237,5 +237,8 @@ Wenn du diese API an ein Frontend uebergibst, ist wichtig:
 - `openapi.yaml` beschreibt Request- und Response-Formate im Detail
 - dieses Dokument erklaert die Fachlogik und Rechte einfacher
 - `rental-agreement-documents.md` beschreibt den geplanten PDF- und Dokumentworkflow
+- `TODO.md` enthaelt die kurze Paket-Roadmap fuer die naechsten Backend-Schritte
 - bei `properties` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff auf ein Objekt hat
 - bei `addresses`, `properties` und `rental-agreements` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff hat
+- bei `documents` sollte das Frontend ebenfalls mit `403 Forbidden` rechnen, wenn der Benutzer keinen Zugriff auf das verknuepfte Fachobjekt hat
+- Roadmap-Endpunkte aus `rental-agreement-documents.md` sind erst nutzbar, wenn sie auch in `openapi.yaml` stehen

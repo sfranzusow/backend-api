@@ -340,6 +340,136 @@ Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
 hochladen.
 
+## Roadmap ab Paket 3
+
+Diese Roadmap soll die naechsten Arbeitspakete festhalten, damit Backend und
+Frontend denselben Stand haben. `openapi.yaml` wird jeweils nur fuer tatsaechlich
+implementierte Endpunkte angepasst.
+
+### Paket 3: PDF aus Vorlage erzeugen
+
+Ziel: Aus einem bestehenden `Document` am Mietvertrag soll eine erste
+`DocumentVersion` entstehen. Diese Version ist ein Snapshot und darf sich
+spaeter nicht rueckwirkend aendern.
+
+Geplanter Umfang:
+
+- Standard-Mietvertragsvorlage bereitstellen, entweder als Seeder oder ueber
+  eine kleine Template-API
+- Daten aus `RentalAgreement`, `Property`, `landlord` und `tenant` in einen
+  stabilen Snapshot uebernehmen
+- `DocumentVersion` mit `version_number`, `template_snapshot`,
+  `data_snapshot`, `content_snapshot`, `generated_by_id` und `generated_at`
+  erzeugen
+- `Document.status` und `DocumentVersion.status` auf `generated` setzen, sobald
+  die Version erzeugt wurde
+- PDF-Datei speichern und als `DocumentFile` mit `file_type=generated_pdf`
+  verknuepfen, wenn die PDF-Erzeugung im selben Paket umgesetzt wird
+
+Moegliche API:
+
+- `POST /documents/{document}/generate`: Version/PDF aus Vorlage erzeugen
+- `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
+
+Offene Entscheidung:
+
+- PDF-Erzeugung direkt in Paket 3 oder zuerst HTML-/Content-Snapshot ohne echte
+  PDF-Datei. Fuer das Frontend ist echte PDF-Erzeugung nuetzlicher, aber auch
+  groesser.
+
+### Paket 4: Unterschriebenes Dokument hochladen
+
+Ziel: Ein unterschriebenes PDF, Scan oder Foto soll zu einer vorhandenen
+Dokumentversion hochgeladen werden koennen.
+
+Geplanter Umfang:
+
+- Upload validieren, z. B. MIME-Type, Dateigroesse und erlaubte Dateitypen
+- Datei im Storage ablegen
+- `DocumentFile` mit `file_type=signed_upload` erzeugen
+- `Document.status` und/oder `DocumentVersion.status` auf `signed_uploaded`
+  setzen
+- Berechtigungen klaeren: Vermieter darf hochladen, Mieter optional fuer eigene
+  Mietvertraege
+
+Moegliche API:
+
+- `POST /documents/{document}/signed-upload`
+- `GET /documents/{document}/signed-download`
+
+### Paket 5: Workflow schärfen
+
+Ziel: Dokument- und Mietvertragsstatus sollen klar zusammenspielen, ohne ihre
+fachlichen Bedeutungen zu vermischen.
+
+Geplanter Umfang:
+
+- Dokumentstatus als eigene Workflow-Regeln definieren:
+  `draft`, `generated`, `shared`, `signed_uploaded`, `void`
+- erlaubte Dokumentstatuswechsel testen
+- Verwerfen/Ersetzen alter Versionen klaeren
+- Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen, wenn
+  Vertragsdaten nach PDF-Erzeugung geaendert wurden
+- Mietvertragsworkflow fuer Aktivierung, Beendigung und Kuendigung getrennt
+  weiter ausbauen
+
+Moegliche API:
+
+- `POST /documents/{document}/void`
+- spaeter optional: `POST /documents/{document}/share`
+
+### Paket 6: Fristen und Erinnerungen
+
+Ziel: Relevante Termine sollen im System sichtbar und spaeter automatisiert
+erinnerbar sein.
+
+Geplanter Umfang:
+
+- Erinnerungsfaelle definieren, z. B. fehlende Unterschrift, Vertragsbeginn,
+  Vertragsende, Kuendigungsfrist
+- Datenmodell fuer Reminder oder geplante Aktionen festlegen
+- Artisan Command oder Job fuer faellige Erinnerungen
+- Tests fuer faellige und nicht faellige Erinnerungen
+
+### Paket 7: Kaution und Zahlungen
+
+Ziel: Kaution und Zahlungen sollen fachlich getrennt vom Documents-Modul
+modelliert werden.
+
+Geplanter Umfang:
+
+- klaeren, ob es nur Kautionsstatus oder echte Zahlungsvorgaenge braucht
+- Modelle fuer Kaution, Zahlungsplan oder Zahlungseintrag planen
+- Rollen- und Sichtbarkeitsregeln fuer Vermieter und Mieter definieren
+- keine direkte Kopplung an PDF-Dateien; Dokumente duerfen hoechstens Berichte
+  oder Belege referenzieren
+
+### Paket 8: Mieter- und Vermieter-Sichten verfeinern
+
+Ziel: API-Responses und Berechtigungen sollen die unterschiedlichen
+Frontend-Ansichten klar unterstuetzen.
+
+Geplanter Umfang:
+
+- pruefen, welche Felder Mieter in Mietvertrag, Objekt und Dokument sehen duerfen
+- pruefen, welche Dokumentaktionen pro Rolle sichtbar/erlaubt sind
+- Listenfilter und Response-Includes fuer wiederkehrende Frontend-Ansichten
+  schaerfen
+- OpenAPI-Beispiele fuer typische Vermieter- und Mieter-Responses ergaenzen,
+  wenn die Endpunkte stabil sind
+
+## Frontend-Uebergabe
+
+Fuer die Uebergabe ans Frontend gelten diese Quellen:
+
+- `docs/openapi.yaml`: technische Wahrheit fuer implementierte Endpunkte,
+  Request-Body, Response-Body und Fehlercodes
+- `docs/api-overview.md`: Rollen, Berechtigungen und fachliche Kurzfassung
+- diese Datei: geplanter Dokumentworkflow, Roadmap und fachliche Entscheidungen
+
+Wichtig: Roadmap-Endpunkte duerfen im Frontend nicht als implementiert behandelt
+werden, solange sie nicht in `openapi.yaml` stehen.
+
 ## Spaetere Herausloesbarkeit
 
 Damit Documents spaeter in ein eigenes Repository verschoben werden kann,

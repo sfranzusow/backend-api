@@ -16,10 +16,16 @@
 
 ### Nächste mögliche Schritte
 
-- Vertragsdokument/PDF aus Vorlage erzeugen.
-- Workflow weiter ausbauen: Entwurf, Aktivierung, Beendigung, Kündigung.
-- Einfachen Upload für unterschriebene Dokumente bauen.
-- Digitale Signatur später über externen Anbieter bewerten.
-- Fristen/Erinnerungen ergänzen.
-- Kaution/Zahlungen modellieren.
-- Getrennte Mieter- und Vermieter-Sichten weiter verfeinern.
+- Paket 3: Vertragsdokument/PDF aus Vorlage erzeugen.
+- Paket 4: Einfachen Upload für unterschriebene Dokumente bauen.
+- Paket 5: Workflow weiter ausbauen: Entwurf, Erzeugung, Freigabe, Upload, Verwerfen, Kündigung/Beendigung.
+- Paket 6: Fristen/Erinnerungen ergänzen.
+- Paket 7: Kaution/Zahlungen modellieren.
+- Paket 8: Getrennte Mieter- und Vermieter-Sichten weiter verfeinern.
+
+### Frontend-Übergabe
+
+- `docs/openapi.yaml`: technische Quelle für aktuell implementierte Endpunkte, Requests und Responses.
+- `docs/api-overview.md`: fachliche Zusammenfassung, Rollen und Berechtigungen.
+- `docs/rental-agreement-documents.md`: Roadmap für PDF-, Upload-, Signatur- und Dokumentworkflow.
+- `TODO.md`: kurze Paketliste für die nächste Backend-Planung.
