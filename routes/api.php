@@ -30,4 +30,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'index']);
     Route::post('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'store']);
     Route::get('/documents/{document}', [DocumentController::class, 'show']);
+    Route::post('/documents/{document}/generate', [DocumentController::class, 'generate']);
+    Route::get('/documents/{document}/download', [DocumentController::class, 'download']);
 });

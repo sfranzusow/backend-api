@@ -69,9 +69,9 @@ Version eingefroren.
 ## Aktueller Backend-Stand
 
 Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
-inklusive erster HTTP-Endpunkte fuer Dokument-Metadaten. PDF-Erzeugung,
-Download und Uploads sind noch nicht implementiert. Die technische API ist in
-`openapi.yaml` dokumentiert.
+inklusive HTTP-Endpunkten fuer Dokument-Metadaten, erste PDF-Erzeugung und
+Download. Uploads fuer unterschriebene Dokumente sind noch nicht implementiert.
+Die technische API ist in `openapi.yaml` dokumentiert.
 
 Angelegt sind:
 
@@ -95,9 +95,12 @@ Aktuell implementierte Endpunkte:
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
+- `POST /documents/{document}/generate`: Snapshot-Version und PDF aus Vorlage erzeugen
+- `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 
-Die Endpunkte erzeugen noch keine `DocumentVersion` und keine Datei. Sie haengen
-zunaechst nur eine generische Dokumentakte an den Mietvertrag.
+Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
+Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
+mit `file_type=generated_pdf` gespeichert.
 
 ## Modulgrenzen
 
@@ -124,9 +127,11 @@ Geplante Kernverantwortungen:
 - `DocumentGenerator`: erzeugt Dokumentversionen aus Vorlage und Daten
 - `DocumentRenderer`: rendert HTML/PDF aus Snapshot-Daten
 
-Die Rental-Agreement-Seite sollte nur eine klare Schnittstelle nutzen, z. B.
-`DocumentGenerator::generateFor($rentalAgreement, $template)`. Die konkrete
-PDF-Erzeugung, Storage-Pfade und Upload-Regeln bleiben im Documents-Modul.
+Die Rental-Agreement-Seite sollte nur eine klare Schnittstelle nutzen. Aktuell
+liegt die erste Generate-Aktion noch im API-Controller; bei weiterem Ausbau
+sollte sie in einen Documents-Service wie `DocumentGenerator` verschoben werden.
+Die konkrete PDF-Erzeugung, Storage-Pfade und Upload-Regeln bleiben im
+Documents-Modul.
 
 ## Warum Snapshot?
 
@@ -283,10 +288,11 @@ nicht.
 
 - `GET /document-templates`: Vorlagenliste
 - `GET /document-templates/{template}`: Vorlage anzeigen
-- `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten, spaeter PDF-Erzeugung oder separater Generate-Endpunkt
+- `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten
 - `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
-- `GET /documents/{document}/download`: erzeugtes PDF herunterladen
+- `POST /documents/{document}/generate`: implementiert fuer erste Snapshot-/PDF-Erzeugung
+- `GET /documents/{document}/download`: implementiert fuer erzeugtes PDF
 - `POST /documents/{document}/signed-upload`: unterschriebene Version hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Version herunterladen
 - `POST /documents/{document}/void`: Dokumentversion verwerfen
@@ -321,20 +327,22 @@ sein:
 
 ## Erste Backend-Umsetzung
 
-Der erste Backend-Schritt ist umgesetzt:
+Die ersten Backend-Schritte sind umgesetzt:
 
 1. Modulare Documents-Struktur im bestehenden Laravel-Projekt anlegen.
 2. Tabelle und Modell fuer `DocumentTemplate`.
 3. Tabelle und Modell fuer `Document`.
 4. Tabellen und Modelle fuer `DocumentVersion` und `DocumentFile`.
 5. Dokument-Metadaten per API an Mietvertraege haengen und abrufen.
+6. Standard-Mietvertragsvorlage bereitstellen.
+7. PDF-Snapshot per API erzeugen und herunterladen.
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Ein Standard-Mustermietvertrag als Seed-Daten oder Admin-Template-API.
-2. PDF-Erzeugung aus Vorlage und Mietvertragsdaten.
-3. Download-Endpunkt fuer erzeugte PDFs.
-4. Upload-Endpunkt fuer unterschriebene Versionen.
+1. Upload-Endpunkt fuer unterschriebene Versionen.
+2. Download-Endpunkt fuer unterschriebene Dateien.
+3. Dokumentworkflow mit `void`, `shared` und Ersetzen alter Versionen schaerfen.
+4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
@@ -352,10 +360,9 @@ Ziel: Aus einem bestehenden `Document` am Mietvertrag soll eine erste
 `DocumentVersion` entstehen. Diese Version ist ein Snapshot und darf sich
 spaeter nicht rueckwirkend aendern.
 
-Geplanter Umfang:
+Umgesetzt:
 
-- Standard-Mietvertragsvorlage bereitstellen, entweder als Seeder oder ueber
-  eine kleine Template-API
+- Standard-Mietvertragsvorlage als Seeder
 - Daten aus `RentalAgreement`, `Property`, `landlord` und `tenant` in einen
   stabilen Snapshot uebernehmen
 - `DocumentVersion` mit `version_number`, `template_snapshot`,
@@ -364,18 +371,16 @@ Geplanter Umfang:
 - `Document.status` und `DocumentVersion.status` auf `generated` setzen, sobald
   die Version erzeugt wurde
 - PDF-Datei speichern und als `DocumentFile` mit `file_type=generated_pdf`
-  verknuepfen, wenn die PDF-Erzeugung im selben Paket umgesetzt wird
+  verknuepfen
 
-Moegliche API:
+Implementierte API:
 
 - `POST /documents/{document}/generate`: Version/PDF aus Vorlage erzeugen
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 
-Offene Entscheidung:
-
-- PDF-Erzeugung direkt in Paket 3 oder zuerst HTML-/Content-Snapshot ohne echte
-  PDF-Datei. Fuer das Frontend ist echte PDF-Erzeugung nuetzlicher, aber auch
-  groesser.
+Hinweis: Die erste PDF-Erzeugung ist bewusst einfach gehalten und nutzt noch
+keine externe PDF-Bibliothek. Fuer komplexere Layouts sollte spaeter ein
+robuster Renderer hinter den Documents-Schnitt gesetzt werden.
 
 ### Paket 4: Unterschriebenes Dokument hochladen
 

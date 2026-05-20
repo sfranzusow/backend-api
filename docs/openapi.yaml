@@ -949,7 +949,7 @@ paths:
         `admin` darf alle Dokumente sehen.
         `landlord` sieht Dokumente eigener Mietverträge.
         `tenant` sieht Dokumente eigener Mietverträge.
-        Es werden aktuell nur Dokument-Metadaten geliefert; PDF-Erzeugung und Uploads sind noch nicht Teil dieses Endpunkts.
+        Erzeugte Versionen und Dateien werden als `latest_version` mitgeliefert.
       security:
         - sanctumBearer: []
       responses:
@@ -1039,6 +1039,83 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document}/generate:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Dokumentversion und PDF erzeugen
+      description: |
+        Erzeugt für ein Mietvertragsdokument eine neue `DocumentVersion` als Snapshot
+        aus Vorlage, Mietvertragsdaten, Objekt, Vermieter und Mieter.
+        Zusätzlich wird eine PDF-Datei gespeichert und als `DocumentFile`
+        mit `file_type=generated_pdf` verknüpft.
+
+        Erlaubt für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet. `tenant` darf erzeugte PDFs herunterladen,
+        aber keine neuen Versionen erzeugen.
+      security:
+        - sanctumBearer: []
+      responses:
+        '201':
+          description: Version und PDF erzeugt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Keine aktive Vorlage oder nicht unterstützter Dokumentkontext
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /documents/{document}/download:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Aktuell erzeugtes PDF herunterladen
+      description: |
+        Liefert die PDF-Datei der neuesten Dokumentversion zurück, sofern dort
+        eine Datei mit `file_type=generated_pdf` vorhanden ist.
+
+        Es gilt dieselbe Leseberechtigung wie bei `GET /documents/{document}`.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: PDF-Datei
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

@@ -53,6 +53,16 @@ class DocumentPolicy
         return false;
     }
 
+    public function generate(User $authUser, Document $document): bool
+    {
+        return $this->update($authUser, $document);
+    }
+
+    public function download(User $authUser, Document $document): bool
+    {
+        return $this->view($authUser, $document);
+    }
+
     public function delete(User $authUser, Document $document): bool
     {
         return $this->update($authUser, $document);

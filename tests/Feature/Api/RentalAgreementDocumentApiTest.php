@@ -4,12 +4,16 @@ namespace Tests\Feature\Api;
 
 use App\Enums\RoleName;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\DocumentTemplate;
+use App\Models\DocumentVersion;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use App\Models\User;
+use Database\Seeders\DocumentTemplateSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RentalAgreementDocumentApiTest extends TestCase
@@ -33,6 +37,8 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->getJson('/api/rental-agreements/'.$agreement->id.'/documents')->assertUnauthorized();
         $this->postJson('/api/rental-agreements/'.$agreement->id.'/documents')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id)->assertUnauthorized();
+        $this->postJson('/api/documents/'.$document->id.'/generate')->assertUnauthorized();
+        $this->getJson('/api/documents/'.$document->id.'/download')->assertUnauthorized();
     }
 
     public function test_landlord_can_create_document_for_own_rental_agreement(): void
@@ -189,6 +195,132 @@ class RentalAgreementDocumentApiTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['document_template_id']);
+    }
+
+    public function test_landlord_can_generate_and_download_pdf_for_own_rental_agreement_document(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create(['name' => 'Erika Vermieter']);
+        $user->assignRole(RoleName::Landlord->value);
+        $tenant = User::factory()->create(['name' => 'Max Mieter']);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'tenant_id' => $tenant->id,
+            'date_from' => '2026-06-01',
+            'date_to' => null,
+            'rent_cold' => '900.00',
+            'rent_warm' => '1100.00',
+            'deposit' => '2700.00',
+            'currency' => 'EUR',
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ rental_agreement.rent_cold }}</p>',
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+            'title' => 'Wohnraummietvertrag',
+            'created_by_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertCreated()
+            ->assertJsonPath('data.status', Document::STATUS_GENERATED)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_GENERATED)
+            ->assertJsonPath('data.latest_version.version_number', 1)
+            ->assertJsonPath('data.latest_version.generated_by_id', $user->id)
+            ->assertJsonPath('data.latest_version.data_snapshot.landlord.name', 'Erika Vermieter')
+            ->assertJsonPath('data.latest_version.data_snapshot.tenant.name', 'Max Mieter')
+            ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.rent_cold', '900.00')
+            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>900.00</p>')
+            ->assertJsonCount(1, 'data.latest_version.files');
+
+        $filePath = $response->json('data.latest_version.files.0.path');
+
+        Storage::disk('local')->assertExists($filePath);
+        $this->assertStringStartsWith('%PDF-1.4', Storage::disk('local')->get($filePath));
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        $this->assertDatabaseHas('document_versions', [
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+            'generated_by_id' => $user->id,
+        ]);
+        $this->assertDatabaseHas('document_files', [
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+            'disk' => 'local',
+            'path' => $filePath,
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $download = $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/download')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF-1.4', $download->streamedContent());
+    }
+
+    public function test_tenant_cannot_generate_document_for_own_rental_agreement(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertForbidden();
+    }
+
+    public function test_landlord_can_generate_document_with_seeded_standard_template(): void
+    {
+        Storage::fake('local');
+        $this->seed(DocumentTemplateSeeder::class);
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => null,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertCreated()
+            ->assertJsonPath('data.status', Document::STATUS_GENERATED)
+            ->assertJsonPath('data.template.name', 'Wohnraummietvertrag Standard')
+            ->assertJsonPath('data.latest_version.template_snapshot.name', 'Wohnraummietvertrag Standard')
+            ->assertJsonCount(1, 'data.latest_version.files');
+
+        Storage::disk('local')->assertExists($response->json('data.latest_version.files.0.path'));
     }
 
     private function propertyManagedBy(User $landlord): Property

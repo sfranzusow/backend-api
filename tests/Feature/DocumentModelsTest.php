@@ -8,6 +8,7 @@ use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\RentalAgreement;
 use App\Models\User;
+use Database\Seeders\DocumentTemplateSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -99,6 +100,20 @@ class DocumentModelsTest extends TestCase
         DocumentVersion::factory()->create([
             'document_id' => $document->id,
             'version_number' => 1,
+        ]);
+    }
+
+    public function test_document_template_seeder_creates_standard_rental_agreement_template(): void
+    {
+        $this->seed(DocumentTemplateSeeder::class);
+
+        $this->assertDatabaseHas('document_templates', [
+            'document_type' => 'rental_agreement_contract',
+            'template_type' => 'residential',
+            'locale' => 'de-DE',
+            'version' => 1,
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+            'name' => 'Wohnraummietvertrag Standard',
         ]);
     }
 }

@@ -13,10 +13,10 @@
 - Architekturentscheidung festgehalten: Documents als generisches internes Modul planen, damit es später in ein eigenes Repository oder Paket herausgelöst werden kann.
 - Generische Documents-Struktur angelegt: `DocumentTemplate`, `Document`, `DocumentVersion`, `DocumentFile`.
 - Dokumente können per API an Mietverträge gehängt, gelistet und einzeln abgefragt werden.
+- Paket 3 umgesetzt: Standard-Mietvertragsvorlage als Seeder, PDF-Snapshot per `POST /documents/{document}/generate`, Download per `GET /documents/{document}/download`.
 
 ### Nächste mögliche Schritte
 
-- Paket 3: Vertragsdokument/PDF aus Vorlage erzeugen.
 - Paket 4: Einfachen Upload für unterschriebene Dokumente bauen.
 - Paket 5: Workflow weiter ausbauen: Entwurf, Erzeugung, Freigabe, Upload, Verwerfen, Kündigung/Beendigung.
 - Paket 6: Fristen/Erinnerungen ergänzen.

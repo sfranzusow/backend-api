@@ -135,12 +135,15 @@ Wichtige Validierungsregeln fuer das Frontend:
 
 ### Dokumente
 
-Die Documents-API verwaltet aktuell nur Dokument-Metadaten. Es gibt noch keine
-PDF-Erzeugung, keinen Download und keinen unterschriebenen Upload.
+Die Documents-API verwaltet Dokument-Metadaten und kann fuer
+Mietvertragsdokumente erste PDF-Snapshots aus einer Vorlage erzeugen. Einen
+unterschriebenen Upload gibt es noch nicht.
 
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
+- `POST /documents/{document}/generate`: neue Dokumentversion mit PDF erzeugen
+- `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 
 Beim Anlegen gilt:
 
@@ -149,17 +152,24 @@ Beim Anlegen gilt:
 - wenn `document_template_id` gesetzt ist, muss die Vorlage denselben `document_type` haben
 - neue Dokumente starten immer als `draft`
 
+Beim Erzeugen gilt:
+
+- die Vorlage muss aktiv sein; ohne zugewiesene Vorlage wird eine aktive Vorlage zum `document_type` gesucht
+- die erzeugte `DocumentVersion` speichert `content_snapshot`, `template_snapshot`, `data_snapshot`, `generated_by_id` und `generated_at`
+- `Document.status` und `DocumentVersion.status` werden auf `generated` gesetzt
+- die PDF-Datei wird als `DocumentFile` mit `file_type=generated_pdf` gespeichert
+
 Berechtigungen:
 
-- `admin` darf Dokumente fuer alle Mietvertraege sehen und anlegen
-- `landlord` darf Dokumente eigener Mietvertraege sehen und anlegen, wenn er das zugehoerige Objekt als Vermieter verwaltet
-- `tenant` darf Dokumente eigener Mietvertraege sehen, aber nicht anlegen
+- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen und herunterladen
+- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- `tenant` darf Dokumente und erzeugte PDFs eigener Mietvertraege sehen/herunterladen, aber nicht anlegen oder erzeugen
 - `user` hat keinen Zugriff
 
 Geplante Vertragsdokumente und PDF-Erzeugung sind in
 [`rental-agreement-documents.md`](/home/slavik/project/backend-api/docs/rental-agreement-documents.md:1)
-beschrieben. Die ersten Dokument-Metadaten-Endpunkte stehen in `openapi.yaml`.
-PDF-Erzeugung, Download und Uploads sind noch Folgepakete.
+beschrieben. Die implementierten Dokument-Endpunkte stehen in `openapi.yaml`.
+Unterschriebene Uploads sind noch ein Folgepaket.
 
 ## Rechte nach Rolle
 
@@ -195,7 +205,7 @@ Einschraenkungen:
 - darf Adressen eigener Objekte sehen, aendern und loeschen
 - darf neue Adressen anlegen
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
-- darf Dokumente eigener Mietvertraege sehen und anlegen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 
 ### Tenant
 
@@ -209,7 +219,7 @@ Einschraenkungen:
 - darf Property-Mitglieder nicht verwalten
 - darf keine Adressen sehen
 - darf eigene Mietvertraege sehen
-- darf Dokumente eigener Mietvertraege sehen
+- darf Dokumente und erzeugte PDFs eigener Mietvertraege sehen/herunterladen
 
 ### User
 
