@@ -116,4 +116,41 @@ class DocumentModelsTest extends TestCase
             'name' => 'Wohnraummietvertrag Standard',
         ]);
     }
+
+    public function test_documents_enforce_status_transitions(): void
+    {
+        $document = Document::factory()->make([
+            'status' => Document::STATUS_DRAFT,
+        ]);
+
+        $this->assertTrue($document->canTransitionToStatus(Document::STATUS_GENERATED));
+        $this->assertTrue($document->canTransitionToStatus(Document::STATUS_VOID));
+        $this->assertFalse($document->canTransitionToStatus(Document::STATUS_SIGNED_UPLOADED));
+
+        $document->status = Document::STATUS_GENERATED;
+
+        $this->assertTrue($document->canTransitionToStatus(Document::STATUS_SHARED));
+        $this->assertTrue($document->canTransitionToStatus(Document::STATUS_SIGNED_UPLOADED));
+
+        $document->status = Document::STATUS_VOID;
+
+        $this->assertTrue($document->canTransitionToStatus(Document::STATUS_VOID));
+        $this->assertFalse($document->canTransitionToStatus(Document::STATUS_GENERATED));
+    }
+
+    public function test_document_versions_enforce_status_transitions(): void
+    {
+        $version = DocumentVersion::factory()->make([
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $this->assertTrue($version->canTransitionToStatus(DocumentVersion::STATUS_SHARED));
+        $this->assertTrue($version->canTransitionToStatus(DocumentVersion::STATUS_SIGNED_UPLOADED));
+        $this->assertTrue($version->canTransitionToStatus(DocumentVersion::STATUS_VOID));
+
+        $version->status = DocumentVersion::STATUS_VOID;
+
+        $this->assertTrue($version->canTransitionToStatus(DocumentVersion::STATUS_VOID));
+        $this->assertFalse($version->canTransitionToStatus(DocumentVersion::STATUS_SHARED));
+    }
 }

@@ -144,6 +144,8 @@ heruntergeladen werden.
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
 - `POST /documents/{document}/generate`: neue Dokumentversion mit PDF erzeugen
+- `POST /documents/{document}/share`: erzeugtes Dokument freigeben
+- `POST /documents/{document}/void`: Dokument verwerfen
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
@@ -161,6 +163,14 @@ Beim Erzeugen gilt:
 - die erzeugte `DocumentVersion` speichert `content_snapshot`, `template_snapshot`, `data_snapshot`, `generated_by_id` und `generated_at`
 - `Document.status` und `DocumentVersion.status` werden auf `generated` gesetzt
 - die PDF-Datei wird als `DocumentFile` mit `file_type=generated_pdf` gespeichert
+- wenn ein bereits erzeugtes Dokument erneut erzeugt wird, wird die vorherige neueste Version auf `void` gesetzt
+
+Beim Workflow gilt:
+
+- erlaubte Status sind `draft`, `generated`, `shared`, `signed_uploaded`, `void`
+- `POST /documents/{document}/share` setzt `generated` auf `shared`
+- `POST /documents/{document}/void` setzt das Dokument und die neueste Version auf `void`
+- `void` ist final; Downloads, Uploads und erneute Erzeugung liefern dann keinen neuen Workflow-Fortschritt mehr
 
 Beim Upload gilt:
 
@@ -171,8 +181,8 @@ Beim Upload gilt:
 
 Berechtigungen:
 
-- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen
-- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- `admin` darf Dokumente fuer alle Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen
+- `landlord` darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 - `tenant` darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen und eine unterschriebene Datei hochladen, aber keine Dokumentakte anlegen oder PDF-Version erzeugen
 - `user` hat keinen Zugriff
 
@@ -215,7 +225,7 @@ Einschraenkungen:
 - darf Adressen eigener Objekte sehen, aendern und loeschen
 - darf neue Adressen anlegen
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
-- darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
+- darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 
 ### Tenant
 

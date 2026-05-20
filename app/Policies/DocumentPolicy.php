@@ -58,6 +58,16 @@ class DocumentPolicy
         return $this->update($authUser, $document);
     }
 
+    public function share(User $authUser, Document $document): bool
+    {
+        return $this->update($authUser, $document);
+    }
+
+    public function voidDocument(User $authUser, Document $document): bool
+    {
+        return $this->update($authUser, $document);
+    }
+
     public function download(User $authUser, Document $document): bool
     {
         return $this->view($authUser, $document);

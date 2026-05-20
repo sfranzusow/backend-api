@@ -28,6 +28,14 @@ class Document extends Model
 
     public const STATUS_VOID = 'void';
 
+    private const STATUS_TRANSITIONS = [
+        self::STATUS_DRAFT => [self::STATUS_DRAFT, self::STATUS_GENERATED, self::STATUS_VOID],
+        self::STATUS_GENERATED => [self::STATUS_GENERATED, self::STATUS_SHARED, self::STATUS_SIGNED_UPLOADED, self::STATUS_VOID],
+        self::STATUS_SHARED => [self::STATUS_SHARED, self::STATUS_SIGNED_UPLOADED, self::STATUS_VOID],
+        self::STATUS_SIGNED_UPLOADED => [self::STATUS_SIGNED_UPLOADED, self::STATUS_VOID],
+        self::STATUS_VOID => [self::STATUS_VOID],
+    ];
+
     protected $fillable = [
         'documentable_type',
         'documentable_id',
@@ -58,6 +66,11 @@ class Document extends Model
             self::STATUS_SIGNED_UPLOADED,
             self::STATUS_VOID,
         ];
+    }
+
+    public function canTransitionToStatus(string $status): bool
+    {
+        return in_array($status, self::STATUS_TRANSITIONS[$this->status] ?? [], true);
     }
 
     public function documentable(): MorphTo

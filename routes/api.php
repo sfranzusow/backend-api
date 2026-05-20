@@ -31,6 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'store']);
     Route::get('/documents/{document}', [DocumentController::class, 'show']);
     Route::post('/documents/{document}/generate', [DocumentController::class, 'generate']);
+    Route::post('/documents/{document}/share', [DocumentController::class, 'share']);
+    Route::post('/documents/{document}/void', [DocumentController::class, 'voidDocument']);
     Route::get('/documents/{document}/download', [DocumentController::class, 'download']);
     Route::post('/documents/{document}/signed-upload', [DocumentController::class, 'signedUpload']);
     Route::get('/documents/{document}/signed-download', [DocumentController::class, 'signedDownload']);

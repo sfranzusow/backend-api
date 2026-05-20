@@ -39,6 +39,8 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->postJson('/api/rental-agreements/'.$agreement->id.'/documents')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id)->assertUnauthorized();
         $this->postJson('/api/documents/'.$document->id.'/generate')->assertUnauthorized();
+        $this->postJson('/api/documents/'.$document->id.'/share')->assertUnauthorized();
+        $this->postJson('/api/documents/'.$document->id.'/void')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id.'/download')->assertUnauthorized();
         $this->postJson('/api/documents/'.$document->id.'/signed-upload')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id.'/signed-download')->assertUnauthorized();
@@ -324,6 +326,235 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonCount(1, 'data.latest_version.files');
 
         Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
+    }
+
+    public function test_regenerating_document_voids_previous_generated_version(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        $previousVersion = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'document_template_id' => $template->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertCreated()
+            ->assertJsonPath('data.status', Document::STATUS_GENERATED)
+            ->assertJsonPath('data.latest_version.version_number', 2)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_GENERATED);
+
+        $this->assertDatabaseHas('document_versions', [
+            'id' => $previousVersion->id,
+            'status' => DocumentVersion::STATUS_VOID,
+        ]);
+        $this->assertDatabaseHas('document_versions', [
+            'document_id' => $document->id,
+            'version_number' => 2,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+    }
+
+    public function test_landlord_can_share_generated_document(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/share')
+            ->assertOk()
+            ->assertJsonPath('data.status', Document::STATUS_SHARED)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_SHARED);
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => Document::STATUS_SHARED,
+        ]);
+        $this->assertDatabaseHas('document_versions', [
+            'id' => $version->id,
+            'status' => DocumentVersion::STATUS_SHARED,
+        ]);
+    }
+
+    public function test_tenant_cannot_share_own_rental_agreement_document(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/share')
+            ->assertForbidden();
+    }
+
+    public function test_landlord_can_void_draft_document_without_version(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/void')
+            ->assertOk()
+            ->assertJsonPath('data.status', Document::STATUS_VOID)
+            ->assertJsonMissingPath('data.latest_version.id');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => Document::STATUS_VOID,
+        ]);
+    }
+
+    public function test_landlord_can_void_generated_document_and_downloads_are_unavailable(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SIGNED_UPLOADED,
+        ]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_SIGNED_UPLOADED,
+        ]);
+        Storage::disk($this->documentsDisk())->put('documents/test-generated.pdf', '%PDF-1.4 generated');
+        Storage::disk($this->documentsDisk())->put('documents/test-signed.pdf', '%PDF-1.4 signed');
+        DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+            'disk' => $this->documentsDisk(),
+            'path' => 'documents/test-generated.pdf',
+        ]);
+        DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_SIGNED_UPLOAD,
+            'disk' => $this->documentsDisk(),
+            'path' => 'documents/test-signed.pdf',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/void')
+            ->assertOk()
+            ->assertJsonPath('data.status', Document::STATUS_VOID)
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_VOID);
+
+        $this->assertDatabaseHas('document_versions', [
+            'id' => $version->id,
+            'status' => DocumentVersion::STATUS_VOID,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/download')
+            ->assertNotFound();
+
+        $this->actingAs($user, 'sanctum')
+            ->get('/api/documents/'.$document->id.'/signed-download')
+            ->assertNotFound();
+    }
+
+    public function test_void_document_cannot_be_generated_or_signed_again(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_VOID,
+        ]);
+        DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_VOID,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/signed-upload', [
+                'file' => UploadedFile::fake()->create('signed-contract.pdf', 120, 'application/pdf'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['document']);
     }
 
     public function test_landlord_can_upload_and_download_signed_document_for_own_rental_agreement(): void

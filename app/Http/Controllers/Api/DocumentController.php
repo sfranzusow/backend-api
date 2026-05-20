@@ -42,6 +42,12 @@ class DocumentController extends Controller
         DB::transaction(function () use ($request, $document): void {
             $document->loadMissing(['documentable', 'template']);
 
+            if (! $document->canTransitionToStatus(Document::STATUS_GENERATED)) {
+                throw ValidationException::withMessages([
+                    'status' => 'This document cannot be generated from its current status.',
+                ]);
+            }
+
             $rentalAgreement = $document->documentable;
 
             if (! $rentalAgreement instanceof RentalAgreement) {
@@ -62,7 +68,18 @@ class DocumentController extends Controller
             $generatedAt = now();
             $dataSnapshot = $this->rentalAgreementDataSnapshot($document, $template, $rentalAgreement);
             $contentSnapshot = $this->renderTemplateContent($template->content, $dataSnapshot);
+            $previousVersion = $document->latestVersion()->lockForUpdate()->first();
             $versionNumber = ((int) $document->versions()->lockForUpdate()->max('version_number')) + 1;
+
+            if (
+                $previousVersion instanceof DocumentVersion
+                && $previousVersion->canTransitionToStatus(DocumentVersion::STATUS_VOID)
+                && $previousVersion->status !== DocumentVersion::STATUS_VOID
+            ) {
+                $previousVersion->forceFill([
+                    'status' => DocumentVersion::STATUS_VOID,
+                ])->save();
+            }
 
             $version = $document->versions()->create([
                 'document_template_id' => $template->id,
@@ -115,6 +132,75 @@ class DocumentController extends Controller
         ], Response::HTTP_CREATED);
     }
 
+    public function share(Document $document): JsonResponse
+    {
+        $this->authorize('share', $document);
+
+        DB::transaction(function () use ($document): void {
+            $version = $document->latestVersion()->lockForUpdate()->first();
+
+            if (! ($version instanceof DocumentVersion)) {
+                throw ValidationException::withMessages([
+                    'document' => 'A generated document version is required before sharing.',
+                ]);
+            }
+
+            if (
+                ! $document->canTransitionToStatus(Document::STATUS_SHARED)
+                || ! $version->canTransitionToStatus(DocumentVersion::STATUS_SHARED)
+            ) {
+                throw ValidationException::withMessages([
+                    'status' => 'This document cannot be shared from its current status.',
+                ]);
+            }
+
+            $version->forceFill([
+                'status' => DocumentVersion::STATUS_SHARED,
+            ])->save();
+
+            $document->forceFill([
+                'status' => Document::STATUS_SHARED,
+            ])->save();
+        });
+
+        $document->refresh()->load(['template', 'latestVersion.files', 'creator:id,name,email']);
+
+        return response()->json([
+            'data' => new DocumentResource($document),
+        ]);
+    }
+
+    public function voidDocument(Document $document): JsonResponse
+    {
+        $this->authorize('voidDocument', $document);
+
+        DB::transaction(function () use ($document): void {
+            $version = $document->latestVersion()->lockForUpdate()->first();
+
+            if (! $document->canTransitionToStatus(Document::STATUS_VOID)) {
+                throw ValidationException::withMessages([
+                    'status' => 'This document cannot be voided from its current status.',
+                ]);
+            }
+
+            if ($version instanceof DocumentVersion && $version->canTransitionToStatus(DocumentVersion::STATUS_VOID)) {
+                $version->forceFill([
+                    'status' => DocumentVersion::STATUS_VOID,
+                ])->save();
+            }
+
+            $document->forceFill([
+                'status' => Document::STATUS_VOID,
+            ])->save();
+        });
+
+        $document->refresh()->load(['template', 'latestVersion.files', 'creator:id,name,email']);
+
+        return response()->json([
+            'data' => new DocumentResource($document),
+        ]);
+    }
+
     public function download(Document $document): StreamedResponse
     {
         $this->authorize('download', $document);
@@ -124,7 +210,11 @@ class DocumentController extends Controller
         $file = $document->latestVersion?->files
             ->firstWhere('file_type', DocumentFile::TYPE_GENERATED_PDF);
 
-        if (! $file instanceof DocumentFile || ! Storage::disk($file->disk)->exists($file->path)) {
+        if (
+            $document->latestVersion?->status === DocumentVersion::STATUS_VOID
+            || ! $file instanceof DocumentFile
+            || ! Storage::disk($file->disk)->exists($file->path)
+        ) {
             abort(Response::HTTP_NOT_FOUND, 'No generated PDF is available for this document.');
         }
 
@@ -143,12 +233,9 @@ class DocumentController extends Controller
             $version = $document->latestVersion()->lockForUpdate()->first();
 
             if (
-                ! $version instanceof DocumentVersion
-                || ! in_array($version->status, [
-                    DocumentVersion::STATUS_GENERATED,
-                    DocumentVersion::STATUS_SHARED,
-                    DocumentVersion::STATUS_SIGNED_UPLOADED,
-                ], true)
+                ! $document->canTransitionToStatus(Document::STATUS_SIGNED_UPLOADED)
+                || ! ($version instanceof DocumentVersion)
+                || ! $version->canTransitionToStatus(DocumentVersion::STATUS_SIGNED_UPLOADED)
             ) {
                 throw ValidationException::withMessages([
                     'document' => 'A generated document version is required before uploading a signed file.',
@@ -222,7 +309,11 @@ class DocumentController extends Controller
             ->latest('id')
             ->first();
 
-        if (! $file instanceof DocumentFile || ! Storage::disk($file->disk)->exists($file->path)) {
+        if (
+            $document->latestVersion?->status === DocumentVersion::STATUS_VOID
+            || ! $file instanceof DocumentFile
+            || ! Storage::disk($file->disk)->exists($file->path)
+        ) {
             abort(Response::HTTP_NOT_FOUND, 'No signed upload is available for this document.');
         }
 

@@ -15,10 +15,10 @@
 - Dokumente können per API an Mietverträge gehängt, gelistet und einzeln abgefragt werden.
 - Paket 3 umgesetzt: Standard-Mietvertragsvorlage als Seeder, PDF-Snapshot per `POST /documents/{document}/generate`, Download per `GET /documents/{document}/download`.
 - Paket 4 umgesetzt: unterschriebene Datei per `POST /documents/{document}/signed-upload` hochladen, per `GET /documents/{document}/signed-download` herunterladen.
+- Paket 5 umgesetzt: Dokumentworkflow mit `share`, `void`, Statusübergängen und Ersetzen alter erzeugter Versionen geschärft.
 
 ### Nächste mögliche Schritte
 
-- Paket 5: Workflow weiter ausbauen: Entwurf, Erzeugung, Freigabe, Upload, Verwerfen, Kündigung/Beendigung.
 - Paket 6: Fristen/Erinnerungen ergänzen.
 - Paket 7: Kaution/Zahlungen modellieren.
 - Paket 8: Getrennte Mieter- und Vermieter-Sichten weiter verfeinern.

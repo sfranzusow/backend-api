@@ -70,8 +70,9 @@ Version eingefroren.
 
 Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
 inklusive HTTP-Endpunkten fuer Dokument-Metadaten, PDF-Erzeugung, Download und
-Upload/Download unterschriebener Dokumentdateien. Die technische API ist in
-`openapi.yaml` dokumentiert.
+Upload/Download unterschriebener Dokumentdateien. Dokumente koennen ausserdem
+freigegeben oder verworfen werden. Die technische API ist in `openapi.yaml`
+dokumentiert.
 
 Angelegt sind:
 
@@ -96,6 +97,8 @@ Aktuell implementierte Endpunkte:
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
 - `POST /documents/{document}/generate`: Snapshot-Version und PDF aus Vorlage erzeugen
+- `POST /documents/{document}/share`: erzeugte Dokumentversion freigeben
+- `POST /documents/{document}/void`: Dokument und neueste Version verwerfen
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
@@ -105,6 +108,8 @@ Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
 mit `file_type=generated_pdf` gespeichert. Beim Upload wird eine Datei als
 `file_type=signed_upload` an die neueste Dokumentversion gehaengt und der
 Status von `Document` und `DocumentVersion` auf `signed_uploaded` gesetzt.
+`void` ist final; verworfene Versionen werden nicht mehr per Download
+ausgeliefert.
 
 ## Modulgrenzen
 
@@ -296,10 +301,11 @@ implementiert.
 - `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
 - `POST /documents/{document}/generate`: implementiert fuer erste Snapshot-/PDF-Erzeugung
+- `POST /documents/{document}/share`: implementiert fuer Freigabe
+- `POST /documents/{document}/void`: implementiert fuer Verwerfen
 - `GET /documents/{document}/download`: implementiert fuer erzeugtes PDF
 - `POST /documents/{document}/signed-upload`: implementiert fuer unterschriebene Uploads
 - `GET /documents/{document}/signed-download`: implementiert fuer unterschriebene Uploads
-- `POST /documents/{document}/void`: Dokumentversion verwerfen
 
 Fuer eine HTML-Vorschau kann spaeter zusaetzlich ein Preview-Endpunkt sinnvoll
 sein:
@@ -341,13 +347,14 @@ Die ersten Backend-Schritte sind umgesetzt:
 6. Standard-Mietvertragsvorlage bereitstellen.
 7. PDF-Snapshot per API erzeugen und herunterladen.
 8. Unterschriebene Datei hochladen und herunterladen.
+9. Dokumentworkflow fuer Freigabe, Verwerfen und Statusuebergaenge schaerfen.
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Dokumentworkflow mit `void`, `shared` und Ersetzen alter Versionen schaerfen.
-2. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
-3. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
-4. Optional eine Template-API fuer Admins ergaenzen.
+1. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
+2. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
+3. Optional eine Template-API fuer Admins ergaenzen.
+4. Fristen und Erinnerungen fuer fehlende Unterschriften modellieren.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
@@ -411,21 +418,27 @@ Implementierte API:
 Ziel: Dokument- und Mietvertragsstatus sollen klar zusammenspielen, ohne ihre
 fachlichen Bedeutungen zu vermischen.
 
-Geplanter Umfang:
+Umgesetzt:
 
 - Dokumentstatus als eigene Workflow-Regeln definieren:
   `draft`, `generated`, `shared`, `signed_uploaded`, `void`
 - erlaubte Dokumentstatuswechsel testen
-- Verwerfen/Ersetzen alter Versionen klaeren
+- Verwerfen/Ersetzen alter Versionen klaeren: erneute Erzeugung verwirft die
+  vorherige neueste erzeugte Version
+- `void` als finaler Status; Downloads und weitere Uploads/Erzeugung werden
+  blockiert
+
+Noch offen:
+
 - Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen, wenn
   Vertragsdaten nach PDF-Erzeugung geaendert wurden
 - Mietvertragsworkflow fuer Aktivierung, Beendigung und Kuendigung getrennt
   weiter ausbauen
 
-Moegliche API:
+Implementierte API:
 
 - `POST /documents/{document}/void`
-- spaeter optional: `POST /documents/{document}/share`
+- `POST /documents/{document}/share`
 
 ### Paket 6: Fristen und Erinnerungen
 

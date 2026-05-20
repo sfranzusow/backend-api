@@ -1065,6 +1065,10 @@ paths:
         Erlaubt für `admin` oder den zugeordneten `landlord`, der das zugehörige
         Objekt als Vermieter verwaltet. `tenant` darf erzeugte PDFs herunterladen,
         aber keine neuen Versionen erzeugen.
+
+        Ein bereits erzeugtes Dokument kann erneut erzeugt werden; die vorherige
+        neueste Version wird dabei auf `void` gesetzt. Dokumente im Status
+        `signed_uploaded` oder `void` können nicht erneut erzeugt werden.
       security:
         - sanctumBearer: []
       responses:
@@ -1085,7 +1089,92 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
-          description: Keine aktive Vorlage oder nicht unterstützter Dokumentkontext
+          description: Keine aktive Vorlage, ungültiger Status oder nicht unterstützter Dokumentkontext
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /documents/{document}/share:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Dokumentversion freigeben
+      description: |
+        Setzt ein erzeugtes Dokument und seine neueste Version von `generated`
+        auf `shared`.
+
+        Erlaubt für `admin` oder den zugeordneten `landlord`, der das zugehörige
+        Objekt als Vermieter verwaltet. `tenant` darf freigegebene Dokumente
+        sehen/herunterladen, aber nicht selbst freigeben.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: Dokument freigegeben
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Keine erzeugte Version oder ungültiger Status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /documents/{document}/void:
+    parameters:
+      - name: document
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Dokument verwerfen
+      description: |
+        Setzt ein Dokument auf `void`. Wenn eine neueste Dokumentversion
+        vorhanden ist, wird auch diese Version auf `void` gesetzt.
+
+        Ein verworfenes Dokument ist final: erzeugte PDFs und unterschriebene
+        Uploads werden nicht mehr über die Download-Endpunkte ausgeliefert.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: Dokument verworfen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Ungültiger Statusübergang
           content:
             application/json:
               schema:
@@ -1103,7 +1192,8 @@ paths:
       summary: Aktuell erzeugtes PDF herunterladen
       description: |
         Liefert die PDF-Datei der neuesten Dokumentversion zurück, sofern dort
-        eine Datei mit `file_type=generated_pdf` vorhanden ist.
+        eine Datei mit `file_type=generated_pdf` vorhanden ist. Verworfene
+        Versionen liefern `404`.
 
         Es gilt dieselbe Leseberechtigung wie bei `GET /documents/{document}`.
       security:
@@ -1140,6 +1230,9 @@ paths:
         Nach erfolgreichem Upload werden `Document.status` und
         `DocumentVersion.status` auf `signed_uploaded` gesetzt. Die Datei wird
         als `DocumentFile` mit `file_type=signed_upload` gespeichert.
+
+        Uploads sind nur für Dokumente in `generated`, `shared` oder bereits
+        `signed_uploaded` möglich. `void` ist final.
 
         Erlaubt für Benutzer, die das verknüpfte Dokument sehen dürfen,
         z. B. `admin`, zugeordneter `landlord` oder eigener `tenant`.
