@@ -100,3 +100,7 @@ Beim Anlegen setzt der Server sinnvolle Defaults:
 - automatische Ueberfaelligkeits-Jobs
 
 Diese Punkte koennen spaeter auf dem generischen Payment-Kern aufbauen.
+
+## Apis für Bankumsätze
+
+- https://developer.gocardless.com/bank-account-data/overview/
