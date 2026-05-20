@@ -95,4 +95,11 @@ class RentalAgreement extends Model
     {
         return $this->morphMany(Document::class, 'documentable');
     }
+
+    public function payments(): MorphMany
+    {
+        return $this->morphMany(Payment::class, 'payable')
+            ->orderBy('due_date')
+            ->orderBy('id');
+    }
 }

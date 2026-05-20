@@ -17,10 +17,10 @@
 - Paket 4 umgesetzt: unterschriebene Datei per `POST /documents/{document}/signed-upload` hochladen, per `GET /documents/{document}/signed-download` herunterladen.
 - Paket 5 umgesetzt: Dokumentworkflow mit `share`, `void`, Statusübergängen und Ersetzen alter erzeugter Versionen geschärft.
 - Paket 6 umgesetzt: Fristen/Erinnerungen als `DocumentReminder` an Dokumentakten modelliert und per API verwaltbar gemacht.
+- Paket 7 umgesetzt: generische `Payment`-Struktur für Miete, Kaution, Rückzahlungen und Nebenkosten samt API und Doku ergänzt.
 
 ### Nächste mögliche Schritte
 
-- Paket 7: Kaution/Zahlungen modellieren.
 - Paket 8: Getrennte Mieter- und Vermieter-Sichten weiter verfeinern.
 
 ### Frontend-Übergabe
@@ -28,4 +28,5 @@
 - `docs/openapi.yaml`: technische Quelle für aktuell implementierte Endpunkte, Requests und Responses.
 - `docs/api-overview.md`: fachliche Zusammenfassung, Rollen und Berechtigungen.
 - `docs/rental-agreement-documents.md`: Roadmap für PDF-, Upload-, Signatur- und Dokumentworkflow.
+- `docs/rental-agreement-payments.md`: fachliche Übergabe für Miete, Kaution, Rückzahlungen und Zahlungsstatus.
 - `TODO.md`: kurze Paketliste für die nächste Backend-Planung.

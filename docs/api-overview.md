@@ -14,6 +14,7 @@ Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
 - `rental_agreements`: echte Mietvertraege zwischen Vermieter und Mieter
 - `document_templates`, `documents`, `document_versions`, `document_files`, `document_reminders`: interne Documents-Datenbasis fuer Vertragsdokumente, Dateien und Fristen
+- `payments`: generische Zahlungen/Forderungen, z. B. Miete, Kaution und Kautionsrueckzahlung
 
 Wichtig ist die Trennung zwischen:
 
@@ -109,6 +110,11 @@ Die Rental-Agreement-API verwaltet echte Mietvertraege.
 - `DELETE /rental-agreements/{rentalAgreement}`: Mietvertrag loeschen
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente des Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokument-Metadaten an Mietvertrag haengen
+- `GET /rental-agreements/{rentalAgreement}/payments`: Zahlungen/Forderungen des Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/payments`: Zahlung/Forderung am Mietvertrag anlegen
+- `GET /payments/{payment}`: einzelne Zahlung anzeigen
+- `PATCH /payments/{payment}`: Zahlung aktualisieren
+- `DELETE /payments/{payment}`: Zahlung loeschen
 
 Ein Mietvertrag:
 
@@ -117,6 +123,7 @@ Ein Mietvertrag:
 - referenziert genau einen `tenant`
 - kann Laufzeiten, Miete, Kaution und Status enthalten
 - kann generische Dokumentakten haben
+- kann generische Zahlungen/Forderungen haben
 
 Aktueller Stand:
 
@@ -132,6 +139,34 @@ Wichtige Validierungsregeln fuer das Frontend:
 - fuer `landlord` muss `property_id` auf ein Objekt zeigen, das dieser Benutzer als Vermieter verwaltet
 - beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
+
+### Zahlungen
+
+Die Payments-API verwaltet Geldbewegungen und geplante Forderungen generisch.
+Sie ist am Mietvertrag angebunden, aber als polymorphes Modell vorbereitet.
+
+Aktuelle Beispiele:
+
+- monatliche Miete: `type=rent`, `direction=incoming`
+- Kaution vom Mieter an Vermieter: `type=deposit`, `direction=incoming`
+- Kautionsrueckzahlung vom Vermieter an Mieter: `type=deposit_refund`, `direction=outgoing`
+- Nebenkosten/Nachzahlung: `type=service_charge`, meist `direction=incoming`
+
+Wichtige Bedeutung:
+
+- `direction=incoming` bedeutet Zahlung Richtung Vermieter/Vertragsseite
+- `direction=outgoing` bedeutet Auszahlung vom Vermieter Richtung Mieter
+- `status` kann `planned`, `pending`, `paid`, `overdue` oder `cancelled` sein
+- `rental_agreements.deposit` bleibt der vertraglich vereinbarte Kautionsbetrag
+- `payments` zeigen, ob und wann Kaution, Miete oder Rueckzahlung geplant oder gezahlt wurden
+- wenn `payer_id`/`payee_id` fehlen, setzt der Server bei Mietvertraegen Defaults aus Vermieter und Mieter
+
+Berechtigungen:
+
+- `admin` darf alle Zahlungen sehen und verwalten
+- `landlord` darf Zahlungen eigener Mietvertraege sehen und verwalten
+- `tenant` darf Zahlungen eigener Mietvertraege sehen, aber nicht anlegen, aendern oder loeschen
+- `user` hat keinen Zugriff
 
 ### Dokumente
 
@@ -238,6 +273,7 @@ Einschraenkungen:
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
 - darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 - darf Fristen/Erinnerungen fuer diese Dokumente verwalten
+- darf Zahlungen eigener Mietvertraege sehen und verwalten
 
 ### Tenant
 
@@ -254,6 +290,7 @@ Einschraenkungen:
 - darf Dokumente, erzeugte PDFs und unterschriebene Uploads eigener Mietvertraege sehen/herunterladen
 - darf fuer eigene Mietvertraege eine unterschriebene Datei hochladen
 - darf Fristen/Erinnerungen eigener Dokumente sehen, aber nicht verwalten
+- darf Zahlungen eigener Mietvertraege sehen, aber nicht verwalten
 
 ### User
 
@@ -267,12 +304,13 @@ Einschraenkungen:
 - darf keine Adressen sehen
 - darf keine Mietvertraege sehen
 - darf keine Dokumente sehen
+- darf keine Zahlungen sehen
 
 ## Wichtige fachliche Hinweise
 
 - `tenant` kann ein Property sehen, ohne dass dabei automatisch die zugehoerige Adresse im JSON erscheint
 - Mietvertraege enthalten fuer `tenant` weiterhin das Property, aber die verschachtelte Adresse wird ausgeblendet
-- die Sichtbarkeit von Adressen, Mietvertraegen und Dokumenten wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
+- die Sichtbarkeit von Adressen, Mietvertraegen, Dokumenten und Zahlungen wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
 
 ## Empfehlung fuer das Frontend
 
@@ -281,8 +319,10 @@ Wenn du diese API an ein Frontend uebergibst, ist wichtig:
 - `openapi.yaml` beschreibt Request- und Response-Formate im Detail
 - dieses Dokument erklaert die Fachlogik und Rechte einfacher
 - `rental-agreement-documents.md` beschreibt den geplanten PDF- und Dokumentworkflow
+- `rental-agreement-payments.md` beschreibt Miete, Kaution, Rueckzahlungen und Payment-Status
 - `TODO.md` enthaelt die kurze Paket-Roadmap fuer die naechsten Backend-Schritte
 - bei `properties` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff auf ein Objekt hat
 - bei `addresses`, `properties` und `rental-agreements` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff hat
 - bei `documents` sollte das Frontend ebenfalls mit `403 Forbidden` rechnen, wenn der Benutzer keinen Zugriff auf das verknuepfte Fachobjekt hat
+- bei `payments` sollte das Frontend zwischen `type`, `direction` und `status` unterscheiden; Kaution, Rueckzahlung und Miete sind derselbe technische Kern
 - Roadmap-Endpunkte aus `rental-agreement-documents.md` sind erst nutzbar, wenn sie auch in `openapi.yaml` stehen

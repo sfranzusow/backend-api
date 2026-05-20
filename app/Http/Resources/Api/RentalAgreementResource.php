@@ -31,6 +31,7 @@ class RentalAgreementResource extends JsonResource
             'property' => PropertyResource::make($this->whenLoaded('property')),
             'landlord' => UserResource::make($this->whenLoaded('landlord')),
             'tenant' => UserResource::make($this->whenLoaded('tenant')),
+            'payments' => PaymentResource::collection($this->whenLoaded('payments')),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

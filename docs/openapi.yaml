@@ -28,6 +28,7 @@ tags:
   - name: Properties
   - name: RentalAgreements
   - name: Documents
+  - name: Payments
 
 paths:
   /ping:
@@ -1011,6 +1012,193 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+
+  /rental-agreements/{rentalAgreement}/payments:
+    parameters:
+      - name: rentalAgreement
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Payments]
+      summary: Zahlungen eines Mietvertrags auflisten
+      description: |
+        Listet generische Zahlungen zum Mietvertrag. Dazu gehören z. B. Miete,
+        Kaution, Kautionsrückzahlung, Nebenkosten oder sonstige Zahlungen.
+
+        `direction` ist aus Sicht des Vertrags/Vermieters definiert:
+        `incoming` bedeutet Zahlung Richtung Vermieter, `outgoing` bedeutet
+        Auszahlung vom Vermieter Richtung Mieter.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rent, deposit, deposit_refund, service_charge, other]
+        - name: direction
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [incoming, outgoing]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [planned, pending, paid, overdue, cancelled]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Payments]
+      summary: Zahlung am Mietvertrag anlegen
+      description: |
+        Erstellt eine Zahlung oder geplante Forderung am Mietvertrag.
+        `status` ist optional und wird ohne Angabe als `pending` gesetzt.
+        `currency` fällt ohne Angabe auf die Vertragswährung zurück.
+
+        Wenn `payer_id` und `payee_id` nicht übergeben werden, setzt der Server
+        sinnvolle Defaults aus dem Mietvertrag:
+        Bei `incoming` zahlt der Mieter an den Vermieter.
+        Bei `outgoing` zahlt der Vermieter an den Mieter.
+
+        Erlaubt für `admin` oder den zugeordneten `landlord`, der den
+        Mietvertrag bearbeiten darf. `tenant` darf Zahlungen lesen, aber nicht
+        anlegen oder ändern.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorePaymentRequest'
+      responses:
+        '201':
+          description: Zahlung angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /payments/{payment}:
+    parameters:
+      - name: payment
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Payments]
+      summary: Einzelne Zahlung anzeigen
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Payments]
+      summary: Zahlung aktualisieren
+      description: |
+        Aktualisiert Zahlungsdaten. Beim Wechsel auf `paid` setzt der Server
+        `paid_at`, wenn kein eigener Wert übergeben wurde. Beim Wechsel auf
+        einen anderen Status wird `paid_at` ohne eigene Angabe geleert.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaymentRequest'
+      responses:
+        '200':
+          description: Zahlung aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Payments]
+      summary: Zahlung löschen
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /documents/{document}:
     parameters:
@@ -2176,6 +2364,10 @@ components:
           $ref: '#/components/schemas/UserSummary'
         tenant:
           $ref: '#/components/schemas/UserSummary'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
         created_at:
           type: string
           format: date-time
@@ -2296,6 +2488,72 @@ components:
         meta:
           type: object
           additionalProperties: true
+
+    Payment:
+      type: object
+      required: [id, payable_type, payable_id, type, direction, status, amount, currency, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        payable_type:
+          type: string
+          example: RentalAgreement
+        payable_id:
+          type: integer
+        type:
+          type: string
+          enum: [rent, deposit, deposit_refund, service_charge, other]
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: |
+            Aus Sicht des Vertrags/Vermieters:
+            `incoming` = Zahlung Richtung Vermieter,
+            `outgoing` = Auszahlung vom Vermieter Richtung Mieter.
+        status:
+          type: string
+          enum: [planned, pending, paid, overdue, cancelled]
+        amount:
+          type: string
+          example: '1100.00'
+        currency:
+          type: string
+          example: EUR
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        payer_id:
+          type: integer
+          nullable: true
+        payer:
+          allOf:
+            - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        payee_id:
+          type: integer
+          nullable: true
+        payee:
+          allOf:
+            - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     DocumentTemplate:
       type: object
@@ -2577,6 +2835,99 @@ components:
           type: string
           format: binary
           description: PDF, JPG, JPEG oder PNG bis 10 MB.
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    StorePaymentRequest:
+      type: object
+      required: [type, direction, amount]
+      properties:
+        type:
+          type: string
+          enum: [rent, deposit, deposit_refund, service_charge, other]
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: |
+            Aus Sicht des Vertrags/Vermieters:
+            `incoming` = Zahlung Richtung Vermieter,
+            `outgoing` = Auszahlung vom Vermieter Richtung Mieter.
+        status:
+          type: string
+          enum: [planned, pending, paid, overdue, cancelled]
+          default: pending
+        amount:
+          type: number
+          minimum: 0.01
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: Fällt ohne Angabe auf die Vertragswährung zurück.
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        payer_id:
+          type: integer
+          nullable: true
+          description: Ohne Angabe setzt der Server abhängig von `direction` einen Vertrags-Default.
+        payee_id:
+          type: integer
+          nullable: true
+          description: Ohne Angabe setzt der Server abhängig von `direction` einen Vertrags-Default.
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    UpdatePaymentRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [rent, deposit, deposit_refund, service_charge, other]
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+        status:
+          type: string
+          enum: [planned, pending, paid, overdue, cancelled]
+        amount:
+          type: number
+          minimum: 0.01
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        payer_id:
+          type: integer
+          nullable: true
+        payee_id:
+          type: integer
+          nullable: true
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
         metadata:
           type: object
           nullable: true
