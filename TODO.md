@@ -19,11 +19,12 @@
 - Paket 6 umgesetzt: Fristen/Erinnerungen als `DocumentReminder` an Dokumentakten modelliert und per API verwaltbar gemacht.
 - Paket 7 umgesetzt: generische `Payment`-Struktur für Miete, Kaution, Rückzahlungen und Nebenkosten samt API und Doku ergänzt.
 - Paket 8 erster Schnitt umgesetzt: Mieter sehen Dokumente erst ab `shared`/`signed_uploaded`, dürfen signierte Dateien nur bei freigegebenen Dokumenten hochladen und sehen nur eigene Reminder-Zuweisungen; Vermieter/Admin behalten die vollständige Arbeitsakte.
+- Paket 8 vertieft: Dokument- und Mietvertrags-Responses liefern `actions` für Frontend-Buttons; reine Mieter-Sichten blenden interne Notizen, Template-/Snapshot-/Storage- und Creator-Felder aus.
 
 ### Nächste mögliche Schritte
 
 - Schlanken Neustart-Kontext für Frontend/KI festlegen: zuerst `TODO.md`, dann `docs/api-overview.md`, `docs/openapi.yaml` und bei Bedarf die Modulnotizen.
-- Paket 8 weiter vertiefen: konkrete Response-Beispiele und mögliche Action-Hints für Frontend-Buttons ergänzen.
+- Paket 8 abrunden: Listenfilter und optionale Response-Includes für wiederkehrende Frontend-Ansichten schärfen.
 
 ### Frontend-Übergabe
 

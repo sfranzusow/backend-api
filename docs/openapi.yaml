@@ -2330,7 +2330,7 @@ components:
 
     RentalAgreement:
       type: object
-      required: [id, property_id, landlord_id, tenant_id, date_from, rent_cold, currency, status, created_at, updated_at]
+      required: [id, property_id, landlord_id, tenant_id, date_from, rent_cold, currency, status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -2368,6 +2368,7 @@ components:
         notes:
           type: string
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         property:
           $ref: '#/components/schemas/Property'
         landlord:
@@ -2378,12 +2379,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Payment'
+        actions:
+          $ref: '#/components/schemas/RentalAgreementActions'
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    RentalAgreementActions:
+      type: object
+      description: |
+        Frontend-Hinweise fuer rollen- und workflowabhaengige Buttons.
+        `true` bedeutet, dass die Aktion fuer den authentifizierten Benutzer
+        fachlich angeboten werden kann; serverseitige Validierung bleibt
+        weiterhin massgeblich.
+      required: [update, delete, create_document, create_payment]
+      properties:
+        update:
+          type: boolean
+        delete:
+          type: boolean
+        create_document:
+          type: boolean
+        create_payment:
+          type: boolean
 
     StoreRentalAgreementRequest:
       type: object
@@ -2611,7 +2632,7 @@ components:
 
     DocumentFile:
       type: object
-      required: [id, document_version_id, file_type, disk, path, created_at, updated_at]
+      required: [id, document_version_id, file_type, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -2623,8 +2644,10 @@ components:
         disk:
           type: string
           example: local
+          description: Für reine `tenant`-Sichten nicht enthalten.
         path:
           type: string
+          description: Für reine `tenant`-Sichten nicht enthalten; Downloads laufen ueber die Download-Endpunkte.
         original_name:
           type: string
           nullable: true
@@ -2637,13 +2660,16 @@ components:
         checksum:
           type: string
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         metadata:
           type: object
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
           additionalProperties: true
         uploaded_by_id:
           type: integer
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         uploaded_at:
           type: string
           format: date-time
@@ -2666,6 +2692,7 @@ components:
         document_template_id:
           type: integer
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         version_number:
           type: integer
         status:
@@ -2677,17 +2704,21 @@ components:
         content_snapshot:
           type: string
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         template_snapshot:
           type: object
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
           additionalProperties: true
         data_snapshot:
           type: object
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
           additionalProperties: true
         metadata:
           type: object
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
           additionalProperties: true
         files:
           type: array
@@ -2696,6 +2727,7 @@ components:
         generated_by_id:
           type: integer
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         generated_at:
           type: string
           format: date-time
@@ -2761,7 +2793,7 @@ components:
 
     Document:
       type: object
-      required: [id, documentable_type, documentable_id, document_type, status, created_at, updated_at]
+      required: [id, documentable_type, documentable_id, document_type, status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -2773,6 +2805,7 @@ components:
         document_template_id:
           type: integer
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         document_type:
           type: string
           example: rental_agreement_contract
@@ -2785,11 +2818,13 @@ components:
         metadata:
           type: object
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
           additionalProperties: true
         template:
           allOf:
             - $ref: '#/components/schemas/DocumentTemplate'
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         latest_version:
           allOf:
             - $ref: '#/components/schemas/DocumentVersion'
@@ -2804,16 +2839,51 @@ components:
         created_by_id:
           type: integer
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         creator:
           allOf:
             - $ref: '#/components/schemas/UserSummary'
           nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
+        actions:
+          $ref: '#/components/schemas/DocumentActions'
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    DocumentActions:
+      type: object
+      description: |
+        Frontend-Hinweise fuer rollen- und workflowabhaengige Dokumentbuttons.
+        `true` bedeutet, dass die Aktion fuer den authentifizierten Benutzer
+        fachlich angeboten werden kann; der jeweilige Endpunkt prueft weiterhin
+        Berechtigung, Status und Dateien serverseitig.
+      required: [generate, share, void, download, upload_signed, download_signed, create_reminder]
+      properties:
+        generate:
+          type: boolean
+          description: PDF-Snapshot erzeugen oder erneut erzeugen.
+        share:
+          type: boolean
+          description: Erzeugtes Dokument fuer die Gegenseite freigeben.
+        void:
+          type: boolean
+          description: Dokumentakte verwerfen.
+        download:
+          type: boolean
+          description: Erzeugtes PDF herunterladen.
+        upload_signed:
+          type: boolean
+          description: Unterschriebene Datei hochladen.
+        download_signed:
+          type: boolean
+          description: Hochgeladene unterschriebene Datei herunterladen.
+        create_reminder:
+          type: boolean
+          description: Reminder an der Dokumentakte anlegen.
 
     StoreRentalAgreementDocumentRequest:
       type: object

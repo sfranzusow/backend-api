@@ -316,6 +316,140 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_tenant_document_response_hides_internal_fields_and_exposes_allowed_actions(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $landlord = User::factory()->create();
+        $tenant = User::factory()->create();
+        $tenant->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'landlord_id' => $landlord->id,
+            'tenant_id' => $tenant->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
+            'metadata' => [
+                'internal_note' => 'nur Vermieter',
+            ],
+        ]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'document_template_id' => $template->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_SHARED,
+            'metadata' => [
+                'renderer' => 'basic_pdf',
+            ],
+            'generated_by_id' => $landlord->id,
+        ]);
+        Storage::disk($this->documentsDisk())->put('documents/shared-generated.pdf', '%PDF-1.4 shared');
+        DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+            'disk' => $this->documentsDisk(),
+            'path' => 'documents/shared-generated.pdf',
+            'checksum' => hash('sha256', 'shared'),
+            'metadata' => [
+                'storage' => 'private',
+            ],
+            'uploaded_by_id' => $landlord->id,
+        ]);
+
+        $this->actingAs($tenant, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJsonPath('data.actions.generate', false)
+            ->assertJsonPath('data.actions.share', false)
+            ->assertJsonPath('data.actions.void', false)
+            ->assertJsonPath('data.actions.download', true)
+            ->assertJsonPath('data.actions.upload_signed', true)
+            ->assertJsonPath('data.actions.download_signed', false)
+            ->assertJsonPath('data.actions.create_reminder', false)
+            ->assertJsonMissingPath('data.document_template_id')
+            ->assertJsonMissingPath('data.metadata')
+            ->assertJsonMissingPath('data.template')
+            ->assertJsonMissingPath('data.created_by_id')
+            ->assertJsonMissingPath('data.creator')
+            ->assertJsonMissingPath('data.latest_version.document_template_id')
+            ->assertJsonMissingPath('data.latest_version.content_snapshot')
+            ->assertJsonMissingPath('data.latest_version.template_snapshot')
+            ->assertJsonMissingPath('data.latest_version.data_snapshot')
+            ->assertJsonMissingPath('data.latest_version.metadata')
+            ->assertJsonMissingPath('data.latest_version.generated_by_id')
+            ->assertJsonMissingPath('data.latest_version.files.0.disk')
+            ->assertJsonMissingPath('data.latest_version.files.0.path')
+            ->assertJsonMissingPath('data.latest_version.files.0.checksum')
+            ->assertJsonMissingPath('data.latest_version.files.0.metadata')
+            ->assertJsonMissingPath('data.latest_version.files.0.uploaded_by_id');
+    }
+
+    public function test_landlord_document_response_exposes_workflow_actions(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+            'metadata' => [
+                'source' => 'manual',
+            ],
+        ]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $document->id,
+            'document_template_id' => $template->id,
+            'version_number' => 1,
+            'status' => DocumentVersion::STATUS_GENERATED,
+            'generated_by_id' => $user->id,
+        ]);
+        Storage::disk($this->documentsDisk())->put('documents/generated.pdf', '%PDF-1.4 generated');
+        DocumentFile::factory()->create([
+            'document_version_id' => $version->id,
+            'file_type' => DocumentFile::TYPE_GENERATED_PDF,
+            'disk' => $this->documentsDisk(),
+            'path' => 'documents/generated.pdf',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJsonPath('data.document_template_id', $template->id)
+            ->assertJsonPath('data.metadata.source', 'manual')
+            ->assertJsonPath('data.template.id', $template->id)
+            ->assertJsonPath('data.latest_version.document_template_id', $template->id)
+            ->assertJsonPath('data.latest_version.generated_by_id', $user->id)
+            ->assertJsonPath('data.latest_version.files.0.path', 'documents/generated.pdf')
+            ->assertJsonPath('data.actions.generate', true)
+            ->assertJsonPath('data.actions.share', true)
+            ->assertJsonPath('data.actions.void', true)
+            ->assertJsonPath('data.actions.download', true)
+            ->assertJsonPath('data.actions.upload_signed', true)
+            ->assertJsonPath('data.actions.download_signed', false)
+            ->assertJsonPath('data.actions.create_reminder', true);
+    }
+
     public function test_document_reminder_validates_reminder_before_due_date(): void
     {
         $user = User::factory()->create();
@@ -880,9 +1014,17 @@ class RentalAgreementDocumentApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('data.status', Document::STATUS_SIGNED_UPLOADED)
-            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_SIGNED_UPLOADED);
+            ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_SIGNED_UPLOADED)
+            ->assertJsonMissingPath('data.latest_version.files.0.path');
 
-        Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
+        $signedFilePath = DocumentFile::query()
+            ->where('document_version_id', $version->id)
+            ->where('file_type', DocumentFile::TYPE_SIGNED_UPLOAD)
+            ->latest('id')
+            ->value('path');
+
+        $this->assertIsString($signedFilePath);
+        Storage::disk($this->documentsDisk())->assertExists($signedFilePath);
     }
 
     public function test_signed_document_upload_requires_existing_document_version(): void

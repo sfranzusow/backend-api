@@ -323,7 +323,73 @@ Einschraenkungen:
   Frontend sollte `generated` nicht als Mieter-verfuegbar interpretieren
 - Reminder in Tenant-Responses sind eine persoenliche Aufgaben-/Hinweisliste,
   keine vollstaendige Vermieter-Wiedervorlage
+- Dokument-Responses enthalten `actions` als Button-Hinweise fuer das Frontend.
+  Reine `tenant`-Sichten bekommen keine internen Template-, Snapshot-, Storage-
+  oder Creator-Felder.
+- Mietvertrags-Responses enthalten `actions` fuer wiederkehrende
+  Verwaltungsbuttons. Reine `tenant`-Sichten bekommen keine internen `notes`.
 - die Sichtbarkeit von Adressen, Mietvertraegen, Dokumenten und Zahlungen wird nicht nur ueber `show`, sondern auch ueber die Listen serverseitig gefiltert
+
+## Typische Frontend-Responses
+
+Vermieter sehen eine vollstaendige Dokumentakte mit internen Arbeitsdaten und
+Workflow-Aktionen:
+
+```json
+{
+  "data": {
+    "id": 12,
+    "status": "generated",
+    "document_template_id": 3,
+    "metadata": { "source": "manual" },
+    "latest_version": {
+      "version_number": 1,
+      "status": "generated",
+      "content_snapshot": "<h1>Wohnraummietvertrag</h1>",
+      "files": [
+        { "file_type": "generated_pdf", "path": "documents/12/versions/1/generated.pdf" }
+      ]
+    },
+    "actions": {
+      "generate": true,
+      "share": true,
+      "void": true,
+      "download": true,
+      "upload_signed": true,
+      "download_signed": false,
+      "create_reminder": true
+    }
+  }
+}
+```
+
+Mieter sehen nur freigegebene Arbeitsprodukte und koennen daraus ihre erlaubten
+Buttons ableiten:
+
+```json
+{
+  "data": {
+    "id": 12,
+    "status": "shared",
+    "latest_version": {
+      "version_number": 1,
+      "status": "shared",
+      "files": [
+        { "file_type": "generated_pdf", "original_name": "document-12-v1.pdf" }
+      ]
+    },
+    "actions": {
+      "generate": false,
+      "share": false,
+      "void": false,
+      "download": true,
+      "upload_signed": true,
+      "download_signed": false,
+      "create_reminder": false
+    }
+  }
+}
+```
 
 ## Empfehlung fuer das Frontend
 

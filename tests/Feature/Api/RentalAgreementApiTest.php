@@ -148,13 +148,40 @@ class RentalAgreementApiTest extends TestCase
         $user->assignRole(RoleName::Tenant->value);
         $agreement = RentalAgreement::factory()->create([
             'tenant_id' => $user->id,
+            'notes' => 'Internal handover note',
         ]);
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/rental-agreements/'.$agreement->id)
             ->assertSuccessful()
             ->assertJsonPath('data.id', $agreement->id)
+            ->assertJsonPath('data.actions.update', false)
+            ->assertJsonPath('data.actions.delete', false)
+            ->assertJsonPath('data.actions.create_document', false)
+            ->assertJsonPath('data.actions.create_payment', false)
+            ->assertJsonMissingPath('data.notes')
             ->assertJsonMissingPath('data.property.address');
+    }
+
+    public function test_landlord_rental_agreement_response_exposes_management_actions(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'notes' => 'Signed in office.',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id)
+            ->assertSuccessful()
+            ->assertJsonPath('data.notes', 'Signed in office.')
+            ->assertJsonPath('data.actions.update', true)
+            ->assertJsonPath('data.actions.delete', true)
+            ->assertJsonPath('data.actions.create_document', true)
+            ->assertJsonPath('data.actions.create_payment', true);
     }
 
     public function test_landlord_can_update_own_rental_agreement_via_put(): void

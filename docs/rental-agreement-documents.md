@@ -123,6 +123,14 @@ Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
 - Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
 - Reminder werden fuer Mieter auf eigene `assigned_to_id`-Zuweisungen
   reduziert; interne Vermieter-Wiedervorlagen werden nicht ausgeliefert.
+- Dokument-Responses enthalten `actions` fuer Frontend-Buttons:
+  `generate`, `share`, `void`, `download`, `upload_signed`,
+  `download_signed` und `create_reminder`.
+- Reine Mieter-Sichten bekommen keine internen Template-, Snapshot-, Storage-
+  oder Creator-Felder in Dokument-, Versions- und File-Responses.
+- Mietvertrags-Responses enthalten `actions` fuer `update`, `delete`,
+  `create_document` und `create_payment`; interne `notes` werden fuer reine
+  Mieter-Sichten nicht ausgeliefert.
 
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
 Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
@@ -511,7 +519,7 @@ Geplanter Umfang:
 Ziel: API-Responses und Berechtigungen sollen die unterschiedlichen
 Frontend-Ansichten klar unterstuetzen.
 
-Umgesetzter erster Backend-Schnitt:
+Umgesetzt:
 
 - Mieter sehen nur Dokumente eigener Mietvertraege mit Status `shared` oder
   `signed_uploaded`.
@@ -521,11 +529,16 @@ Umgesetzter erster Backend-Schnitt:
 - Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
 - Mieter sehen bei Dokument-Remindern nur eigene `assigned_to_id`-Zuweisungen.
 - Vermieter- und Admin-Sichten bleiben vollstaendige Arbeitsakten.
+- Reine Mieter-Sichten bekommen keine internen Template-, Snapshot-, Storage-
+  oder Creator-Felder in Dokument-, Versions- und File-Responses.
+- Mietvertrags-Responses blenden interne `notes` fuer reine Mieter-Sichten aus.
+- Dokument-Responses liefern `actions` fuer rollen- und statusabhaengige
+  Frontend-Buttons.
+- Mietvertrags-Responses liefern `actions` fuer wiederkehrende
+  Verwaltungsbuttons.
 
 Weiterer geplanter Umfang:
 
-- pruefen, welche Felder Mieter in Mietvertrag, Objekt und Dokument sehen duerfen
-- pruefen, welche Dokumentaktionen pro Rolle sichtbar/erlaubt sind
 - Listenfilter und Response-Includes fuer wiederkehrende Frontend-Ansichten
   schaerfen
 - OpenAPI-Beispiele fuer typische Vermieter- und Mieter-Responses ergaenzen,
