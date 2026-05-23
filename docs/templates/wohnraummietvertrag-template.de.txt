@@ -1,0 +1,305 @@
+WOHNRAUMMIETVERTRAG
+
+Dokument: {{ document.title }}
+Vertragsnummer / Akte: {{ document.id }}
+
+zwischen
+
+Vermieter:
+{{ landlord.name }}
+{{ landlord.address_street }} {{ landlord.address_house_number }}
+{{ landlord.address_zip_code }} {{ landlord.address_city }}
+{{ landlord.address_country }}
+E-Mail: {{ landlord.email }}
+Telefon: {{ landlord.phone_number }}
+
+und
+
+Mieter:
+{{ tenant.name }}
+{{ tenant.address_street }} {{ tenant.address_house_number }}
+{{ tenant.address_zip_code }} {{ tenant.address_city }}
+{{ tenant.address_country }}
+E-Mail: {{ tenant.email }}
+Telefon: {{ tenant.phone_number }}
+
+gemeinsam auch "Parteien" genannt.
+
+1. Mietgegenstand
+
+Der Vermieter vermietet an den Mieter zu Wohnzwecken folgende Wohnung:
+
+Adresse: {{ property.address }}
+Einheit / Wohnungsnummer: {{ property.unit_number }}
+Objektart: {{ property.type }}
+
+Weitere Beschreibung des Mietgegenstands:
+- Wohnfläche: ____________________ m2
+- Zimmer: ____________________
+- Etage: ____________________
+- Mitvermietete Nebenräume / Stellplätze / Keller: ____________________
+- Mitbenutzungsrechte an Gemeinschaftsflächen: ____________________
+
+Die Wohnung wird ausschließlich zu Wohnzwecken überlassen. Eine andere Nutzung,
+insbesondere eine gewerbliche Nutzung, bedarf der vorherigen Zustimmung des
+Vermieters in Textform, soweit nicht zwingendes Recht etwas anderes bestimmt.
+
+2. Mietbeginn, Dauer und Übergabe
+
+Das Mietverhältnis beginnt am: {{ rental_agreement.date_from }}
+
+Es läuft auf unbestimmte Zeit, sofern nachfolgend kein wirksam befristetes
+Mietverhältnis vereinbart ist.
+
+Vereinbartes Ende / Befristung, falls zutreffend: {{ rental_agreement.date_to }}
+Befristungsgrund, falls ein Zeitmietvertrag geschlossen wird: ____________________
+
+Bei Wohnraummietverhältnissen ist ein befristeter Mietvertrag nur unter den
+gesetzlichen Voraussetzungen zulässig. Fehlt ein wirksamer Befristungsgrund,
+gelten die gesetzlichen Regelungen.
+
+Die Übergabe erfolgt spätestens am: ____________________
+Die Parteien erstellen bei Übergabe ein Übergabeprotokoll. Darin werden Zustand,
+Zählerstände, übergebene Schlüssel, bekannte Mängel und mitüberlassene
+Einrichtungen dokumentiert. Das Übergabeprotokoll wird Bestandteil dieses
+Vertrags, soweit es von beiden Parteien unterzeichnet oder bestätigt wird.
+
+3. Miete und Betriebskosten
+
+Die monatliche Nettokaltmiete beträgt:
+{{ rental_agreement.rent_cold }} {{ rental_agreement.currency }}
+
+Die monatliche Betriebskostenvorauszahlung beträgt:
+{{ rental_agreement.service_charges }} {{ rental_agreement.currency }}
+
+Die monatliche Gesamtmiete / Warmmiete beträgt:
+{{ rental_agreement.rent_warm }} {{ rental_agreement.currency }}
+
+Die Miete ist monatlich im Voraus, spätestens bis zum dritten Werktag des
+jeweiligen Monats, zu zahlen.
+
+Zahlungsempfänger:
+{{ landlord.name }}
+
+IBAN: ____________________
+BIC: ____________________
+Verwendungszweck: Mietvertrag {{ rental_agreement.id }} / {{ tenant.name }}
+
+Soweit Betriebskosten vereinbart sind, trägt der Mieter die umlagefähigen
+Betriebskosten im Sinne der Betriebskostenverordnung, soweit diese tatsächlich
+anfallen und gesetzlich umgelegt werden dürfen. Über Vorauszahlungen wird
+jährlich abgerechnet. Nachforderungen und Guthaben richten sich nach der
+Abrechnung und den gesetzlichen Vorgaben.
+
+Soweit Heiz- und Warmwasserkosten verbrauchsabhängig abzurechnen sind, gelten
+die gesetzlichen Vorgaben. Die Parteien können im Rahmen des gesetzlich
+Zulässigen einen angemessenen Umlageschlüssel vereinbaren.
+
+Umlageschlüssel, falls nicht gesetzlich vorgegeben:
+____________________
+
+4. Mietsicherheit / Kaution
+
+Der Mieter leistet eine Mietsicherheit in Höhe von:
+{{ rental_agreement.deposit }} {{ rental_agreement.currency }}
+
+Die Mietsicherheit darf bei Wohnraum höchstens drei monatliche Nettokaltmieten
+betragen. Der Mieter ist berechtigt, eine Geldkaution in drei gleichen
+monatlichen Teilzahlungen zu leisten; die erste Teilzahlung ist zu Beginn des
+Mietverhältnisses fällig.
+
+Der Vermieter legt eine Geldkaution getrennt von seinem Vermögen zu dem für
+Spareinlagen mit dreimonatiger Kündigungsfrist üblichen Zinssatz an, soweit
+gesetzlich nichts anderes zulässig vereinbart ist. Die Erträge stehen dem Mieter
+zu und erhöhen die Sicherheit.
+
+Die Kaution dient der Sicherung aller Ansprüche des Vermieters aus dem
+Mietverhältnis. Nach Beendigung des Mietverhältnisses wird sie nach Prüfung
+offener Ansprüche und unter Berücksichtigung zulässiger Zurückbehalte
+abgerechnet.
+
+5. Zustand der Wohnung, Instandhaltung und Mängel
+
+Der Vermieter überlässt die Wohnung in einem zum vertragsgemäßen Gebrauch
+geeigneten Zustand und erhält sie während der Mietzeit in diesem Zustand, soweit
+nicht wirksam etwas anderes vereinbart ist.
+
+Der Mieter hat die Wohnung und die mitvermieteten Einrichtungen schonend und
+pfleglich zu behandeln. Schäden, Mängel, Feuchtigkeit, Schimmelverdacht,
+Wasseraustritt, Ausfall von Heizung, Strom oder sonstigen Anlagen sowie
+Gefahren für das Gebäude sind dem Vermieter unverzüglich anzuzeigen.
+
+Der Mieter haftet für Schäden, die er, seine Haushaltsangehörigen, Besucher,
+Untermieter oder sonstige Personen, denen er den Gebrauch ermöglicht, schuldhaft
+verursachen. Normale Abnutzung durch vertragsgemäßen Gebrauch ist keine
+Beschädigung.
+
+6. Schönheitsreparaturen
+
+Schönheitsreparaturen sind nur geschuldet, soweit eine entsprechende
+Vereinbarung im Einzelfall wirksam ist und die Arbeiten nach dem tatsächlichen
+Zustand der Wohnung erforderlich sind. Starre Fristen gelten nicht.
+
+Die Parteien können folgenden individuellen Zustand bei Übergabe festhalten:
+
+Die Wohnung wird übergeben als:
+[ ] renoviert
+[ ] unrenoviert
+[ ] teilweise renoviert, nämlich: ____________________
+
+Besondere individuelle Vereinbarung zu Schönheitsreparaturen:
+____________________
+
+7. Kleinreparaturen
+
+Soweit rechtlich zulässig, trägt der Mieter die Kosten kleiner
+Instandsetzungen an Teilen der Mietsache, die seinem häufigen und direkten
+Zugriff unterliegen, nur bis zu folgenden Grenzen:
+
+Höchstbetrag je Einzelfall: ____________________ EUR
+Höchstbetrag pro Kalenderjahr: ____________________ EUR
+
+Eine Zahlungspflicht besteht nur, wenn die Klausel im konkreten Einzelfall
+wirksam ist. Reparaturen werden vom Vermieter beauftragt, sofern die Parteien
+nichts anderes ausdrücklich vereinbaren.
+
+8. Nutzung, Haushaltsangehörige und Untervermietung
+
+Der Mieter darf die Wohnung mit den zu seinem Haushalt gehörenden Personen
+bewohnen. Eine dauerhafte Aufnahme weiterer Personen, die nicht nur
+vorübergehend erfolgt, ist dem Vermieter mitzuteilen, soweit gesetzlich zulässig.
+
+Die vollständige oder teilweise Überlassung der Wohnung an Dritte,
+insbesondere Untervermietung, bedarf der vorherigen Erlaubnis des Vermieters,
+soweit gesetzlich nichts anderes gilt. Gesetzliche Ansprüche des Mieters auf
+Erlaubnis zur Gebrauchsüberlassung bleiben unberührt.
+
+9. Tierhaltung
+
+Kleintiere, von denen üblicherweise keine Störungen oder Schäden ausgehen,
+dürfen im Rahmen des vertragsgemäßen Gebrauchs gehalten werden.
+
+Die Haltung anderer Tiere, insbesondere von Hunden und Katzen, bedarf einer
+Abwägung im Einzelfall und der vorherigen Zustimmung des Vermieters in Textform.
+Die Zustimmung darf nicht ohne sachlichen Grund verweigert werden. Gesetzliche
+Rechte bleiben unberührt.
+
+10. Hausordnung und Rücksichtnahme
+
+Der Mieter nimmt auf andere Bewohner, Nachbarn und das Gebäude Rücksicht. Eine
+Hausordnung kann beigefügt werden und gilt, soweit sie den vertragsgemäßen
+Gebrauch nicht unangemessen einschränkt und keine gesetzlichen Rechte
+beschneidet.
+
+Beigefügte Hausordnung:
+[ ] ja
+[ ] nein
+
+11. Bauliche Veränderungen und Einbauten
+
+Bauliche Veränderungen, Eingriffe in die Substanz, feste Einbauten,
+Antennenanlagen, Wallboxen, Markisen oder vergleichbare Maßnahmen bedürfen der
+vorherigen Zustimmung des Vermieters, soweit gesetzlich nichts anderes gilt.
+
+Gesetzliche Ansprüche des Mieters, insbesondere auf Zustimmung zu bestimmten
+Barrierefreiheits-, Ladeinfrastruktur- oder Einbruchschutzmaßnahmen, bleiben
+unberührt.
+
+Bei Beendigung des Mietverhältnisses sind Einbauten auf Verlangen des
+Vermieters zu entfernen und der ursprüngliche Zustand wiederherzustellen, soweit
+dies rechtlich zulässig vereinbart wurde und keine abweichende Vereinbarung
+besteht.
+
+12. Betreten der Wohnung
+
+Der Vermieter darf die Wohnung nur nach vorheriger Ankündigung und aus
+berechtigtem Anlass betreten, insbesondere zur Besichtigung von Mängeln,
+Instandhaltung, Modernisierung, Verkauf, Anschlussvermietung oder zur Abwehr
+dringender Gefahren. Auf berechtigte Interessen des Mieters ist Rücksicht zu
+nehmen.
+
+Bei Gefahr im Verzug darf der Vermieter oder eine von ihm beauftragte Person
+die Wohnung auch ohne vorherige Terminvereinbarung betreten, soweit dies zur
+Gefahrenabwehr erforderlich ist.
+
+13. Modernisierung und Erhaltungsmaßnahmen
+
+Erhaltungsmaßnahmen hat der Mieter nach den gesetzlichen Vorgaben zu dulden.
+Modernisierungsmaßnahmen richten sich nach den gesetzlichen Vorschriften,
+insbesondere hinsichtlich Ankündigung, Duldung, Härteeinwand und möglicher
+Mieterhöhung.
+
+14. Kündigung und Beendigung
+
+Die ordentliche Kündigung richtet sich nach den gesetzlichen Vorschriften. Für
+Kündigungen gelten die gesetzlichen Form- und Fristvorgaben. Das Recht zur
+außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.
+
+Der Mieter gibt die Wohnung bei Beendigung des Mietverhältnisses vollständig
+geräumt, besenrein, mit sämtlichen Schlüsseln und in vertragsgemäßem Zustand
+zurück. Über die Rückgabe soll ein Rückgabeprotokoll erstellt werden.
+
+15. Mehrheit von Mietern oder Vermietern
+
+Sind mehrere Personen Mieter, haften sie für Verpflichtungen aus diesem Vertrag
+als Gesamtschuldner, soweit gesetzlich zulässig. Erklärungen eines Mieters sind
+für die übrigen Mieter nur verbindlich, soweit eine entsprechende Vollmacht oder
+gesetzliche Vertretung vorliegt.
+
+Sind mehrere Personen Vermieter, können sie Rechte aus diesem Vertrag
+gemeinschaftlich ausüben, soweit keine Vertretung angezeigt wurde.
+
+16. Datenschutz und Kommunikation
+
+Die Parteien verarbeiten personenbezogene Daten nur, soweit dies für Abschluss,
+Durchführung, Verwaltung und Beendigung des Mietverhältnisses erforderlich oder
+gesetzlich erlaubt ist.
+
+Erklärungen in Textform können an die oben genannten E-Mail-Adressen gesendet
+werden, soweit gesetzlich nicht Schriftform oder eine strengere Form
+vorgeschrieben ist.
+
+17. Individuelle Vereinbarungen
+
+Folgende individuelle Vereinbarungen gehen vor, soweit sie wirksam und eindeutig
+zwischen den Parteien getroffen wurden:
+
+{{ rental_agreement.notes }}
+
+Weitere individuelle Vereinbarungen:
+____________________
+
+18. Schlussbestimmungen
+
+Änderungen und Ergänzungen dieses Vertrags bedürfen der gesetzlich jeweils
+erforderlichen Form. Gesetzlich zwingende Rechte und Schutzvorschriften,
+insbesondere des Wohnraummietrechts, bleiben unberührt.
+
+Sollten einzelne Bestimmungen dieses Vertrags unwirksam sein oder werden, bleibt
+die Wirksamkeit der übrigen Bestimmungen unberührt. An die Stelle der
+unwirksamen Bestimmung tritt die gesetzliche Regelung.
+
+19. Anlagen
+
+Folgende Anlagen sind Bestandteil dieses Vertrags, soweit beigefügt:
+
+[ ] Übergabeprotokoll
+[ ] Hausordnung
+[ ] Betriebskostenübersicht
+[ ] Energieausweis / Energieinformationen
+[ ] Selbstauskunft / besondere Vereinbarungen
+[ ] Sonstige Anlagen: ____________________
+
+20. Unterschriften
+
+Ort, Datum Vermieter:
+____________________
+
+Unterschrift Vermieter:
+____________________
+
+Ort, Datum Mieter:
+____________________
+
+Unterschrift Mieter:
+____________________
