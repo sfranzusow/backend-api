@@ -1203,6 +1203,278 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /document-templates:
+    get:
+      tags: [Documents]
+      summary: Dokumentvorlagen listen
+      description: |
+        Listet Dokumentvorlagen fuer die Dokumenterzeugung.
+
+        `admin` sieht alle Vorlagen und kann nach `status` filtern.
+        `landlord` sieht nur aktive Vorlagen (`status=active`), unabhaengig
+        vom uebergebenen Statusfilter. `tenant` und `user` haben keinen Zugriff.
+
+        Das Frontend sollte diese Liste fuer die Vorlagenauswahl beim Anlegen
+        einer Dokumentakte nutzen.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: document_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rental_agreement_contract]
+        - name: template_type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: locale
+          in: query
+          required: false
+          schema:
+            type: string
+            example: de-DE
+        - name: status
+          in: query
+          required: false
+          description: Nur fuer `admin` wirksam.
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplatePaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [Documents]
+      summary: Dokumentvorlage anlegen
+      description: |
+        Erstellt eine neue Dokumentvorlage. Aktuell nur fuer `admin`.
+
+        Wenn `placeholders` nicht uebergeben wird, extrahiert der Server die
+        Platzhalter aus `content`. Unbekannte Platzhalter werden abgelehnt.
+
+        Wenn `status=active` uebergeben wird, wird die neue Vorlage nach dem
+        Anlegen aktiviert. Dabei werden andere aktive Vorlagen derselben
+        Kombination aus `document_type`, `template_type` und `locale` archiviert.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreDocumentTemplateRequest'
+      responses:
+        '201':
+          description: Vorlage angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /document-templates/{document_template}:
+    parameters:
+      - name: document_template
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Dokumentvorlage anzeigen
+      description: |
+        Zeigt eine einzelne Dokumentvorlage.
+
+        `admin` sieht alle Vorlagen. `landlord` sieht nur aktive Vorlagen.
+        `tenant` und `user` haben keinen Zugriff.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Documents]
+      summary: Dokumentvorlage ersetzen
+      description: |
+        Aktualisiert eine Dokumentvorlage. Aktuell nur fuer `admin`.
+        Entspricht fachlich derselben Update-Logik wie `PATCH`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentTemplateRequest'
+      responses:
+        '200':
+          description: Vorlage aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [Documents]
+      summary: Dokumentvorlage aktualisieren
+      description: |
+        Aktualisiert eine Dokumentvorlage. Aktuell nur fuer `admin`.
+
+        Wenn `content` geaendert und `placeholders` nicht explizit uebergeben
+        wird, extrahiert der Server die Platzhalter aus dem neuen Inhalt.
+        Unbekannte Platzhalter werden abgelehnt.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentTemplateRequest'
+      responses:
+        '200':
+          description: Vorlage aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Documents]
+      summary: Dokumentvorlage loeschen
+      description: |
+        Loescht eine nicht aktive Dokumentvorlage. Aktuell nur fuer `admin`.
+        Aktive Vorlagen muessen vorher archiviert werden.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Aktive Vorlage kann nicht direkt geloescht werden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /document-templates/{document_template}/activate:
+    parameters:
+      - name: document_template
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Dokumentvorlage aktivieren
+      description: |
+        Aktiviert eine Dokumentvorlage. Aktuell nur fuer `admin`.
+
+        Andere aktive Vorlagen derselben Kombination aus `document_type`,
+        `template_type` und `locale` werden automatisch archiviert. Bereits
+        erzeugte Dokumentversionen bleiben durch ihre `template_snapshot`
+        unveraendert.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: Vorlage aktiviert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /documents/{document}:
     parameters:
       - name: document
@@ -2588,6 +2860,10 @@ components:
 
     DocumentTemplate:
       type: object
+      description: |
+        Wiederverwendbare Vorlage fuer Dokumentakten. Beim Erzeugen eines PDFs
+        wird die verwendete Vorlage in `DocumentVersion.template_snapshot`
+        eingefroren, damit alte Dokumente stabil bleiben.
       required: [id, name, document_type, template_type, locale, version, status, created_at, updated_at]
       properties:
         id:
@@ -2629,6 +2905,22 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    DocumentTemplatePaginator:
+      type: object
+      description: Laravel paginierte Resource-Collection (data + links + meta)
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentTemplate'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
 
     DocumentFile:
       type: object
@@ -2884,6 +3176,98 @@ components:
         create_reminder:
           type: boolean
           description: Reminder an der Dokumentakte anlegen.
+
+    StoreDocumentTemplateRequest:
+      type: object
+      description: |
+        Erstellt eine Dokumentvorlage. `content` nutzt Platzhalter im Format
+        `{{ tenant.name }}`. Wenn `placeholders` fehlt, extrahiert der Server
+        die Platzhalter aus `content`.
+
+        Fuer `rental_agreement_contract` sind aktuell nur die im Snapshot
+        vorhandenen Pfade erlaubt, z. B. `document.title`, `tenant.name`,
+        `landlord.name`, `property.address`, `rental_agreement.rent_cold`.
+      required: [name, document_type]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Wohnraummietvertrag Standard
+        document_type:
+          type: string
+          enum: [rental_agreement_contract]
+        template_type:
+          type: string
+          maxLength: 255
+          default: default
+          example: residential
+        locale:
+          type: string
+          maxLength: 10
+          default: de-DE
+        version:
+          type: integer
+          minimum: 1
+          default: 1
+        status:
+          type: string
+          enum: [draft, active, archived]
+          default: draft
+          description: Bei `active` wird die Vorlage nach dem Anlegen aktiviert.
+        content:
+          type: string
+          nullable: true
+          example: '<h1>{{ document.title }}</h1><p>Mieter: {{ tenant.name }}</p>'
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+          example: [document.title, tenant.name]
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    UpdateDocumentTemplateRequest:
+      type: object
+      description: |
+        Aktualisiert eine Dokumentvorlage. Alle Felder sind optional.
+        Unbekannte Platzhalter werden abgelehnt. Die Kombination aus
+        `document_type`, `template_type`, `locale` und `version` muss eindeutig
+        bleiben.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        document_type:
+          type: string
+          enum: [rental_agreement_contract]
+        template_type:
+          type: string
+          maxLength: 255
+        locale:
+          type: string
+          maxLength: 10
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft, active, archived]
+          description: Bei `active` wird die Vorlage aktiviert und Konkurrenzvorlagen werden archiviert.
+        content:
+          type: string
+          nullable: true
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
 
     StoreRentalAgreementDocumentRequest:
       type: object

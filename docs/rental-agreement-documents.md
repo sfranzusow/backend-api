@@ -332,6 +332,11 @@ implementiert.
 
 - `GET /document-templates`: Vorlagenliste
 - `GET /document-templates/{template}`: Vorlage anzeigen
+- `POST /document-templates`: implementiert fuer Admin-Vorlagenanlage
+- `PUT/PATCH /document-templates/{template}`: implementiert fuer Admin-Vorlagenbearbeitung
+- `POST /document-templates/{template}/activate`: implementiert fuer Aktivierung
+  inklusive Archivierung konkurrierender aktiver Vorlagen
+- `DELETE /document-templates/{template}`: implementiert fuer nicht aktive Vorlagen
 - `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten
 - `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
@@ -365,6 +370,14 @@ sein:
   darstellen.
 - Vertragstexte sollten editierbar sein, aber Platzhalter muessen fuer Benutzer
   klar erkennbar bleiben.
+- Eine Template-Verwaltung sollte zunaechst Admin-only sein.
+- Vermieter brauchen fuer die Dokumentanlage nur aktive Vorlagen.
+- Unbekannte Platzhalter werden serverseitig abgelehnt; das Frontend sollte
+  Validierungsfehler direkt an der Vorlage anzeigen.
+- Beim Aktivieren einer Vorlage archiviert die API andere aktive Vorlagen
+  derselben Kombination aus `document_type`, `template_type` und `locale`.
+- Bereits erzeugte Dokumentversionen bleiben durch ihren `template_snapshot`
+  stabil, auch wenn Vorlagen spaeter geaendert oder archiviert werden.
 
 ## Nicht im ersten Schritt
 
@@ -388,13 +401,14 @@ Die ersten Backend-Schritte sind umgesetzt:
 8. Unterschriebene Datei hochladen und herunterladen.
 9. Dokumentworkflow fuer Freigabe, Verwerfen und Statusuebergaenge schaerfen.
 10. Fristen/Erinnerungen an Dokumentakten modellieren und per API verwalten.
+11. Admin-API fuer Dokumentvorlagen anlegen, bearbeiten, aktivieren, archivieren
+    und loeschen.
 
 Naechste sinnvolle Backend-Schritte:
 
 1. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
 2. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
-3. Optional eine Template-API fuer Admins ergaenzen.
-4. Faellige Reminder spaeter per Command/Job automatisch melden.
+3. Faellige Reminder spaeter per Command/Job automatisch melden.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei

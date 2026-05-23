@@ -175,6 +175,12 @@ Mietvertragsdokumente PDF-Snapshots aus einer Vorlage erzeugen. Unterschriebene
 Dokumentdateien koennen als PDF, Scan oder Foto hochgeladen und wieder
 heruntergeladen werden.
 
+- `GET /document-templates`: Dokumentvorlagen listen
+- `POST /document-templates`: Dokumentvorlage anlegen
+- `GET /document-templates/{documentTemplate}`: einzelne Dokumentvorlage anzeigen
+- `PUT/PATCH /document-templates/{documentTemplate}`: Dokumentvorlage aktualisieren
+- `DELETE /document-templates/{documentTemplate}`: Dokumentvorlage loeschen
+- `POST /document-templates/{documentTemplate}/activate`: Dokumentvorlage aktivieren
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
@@ -188,6 +194,19 @@ heruntergeladen werden.
 - `POST /documents/{document}/reminders`: Frist/Erinnerung anlegen
 - `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
 - `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
+
+Bei Vorlagen gilt:
+
+- `admin` darf Vorlagen anlegen, bearbeiten, aktivieren, archivieren und nicht aktive Vorlagen loeschen
+- `landlord` darf aktive Vorlagen sehen und fuer die Dokumentanlage auswaehlen
+- `tenant` und `user` haben keinen Zugriff auf die Vorlagenverwaltung
+- `content` nutzt Platzhalter im Format `{{ tenant.name }}`
+- wenn `placeholders` nicht uebergeben wird, extrahiert der Server die Platzhalter aus `content`
+- unbekannte Platzhalter werden abgelehnt; fuer Mietvertragsvorlagen sind aktuell nur Pfade aus dem Mietvertrag-Snapshot erlaubt, z. B. `document.title`, `tenant.name`, `landlord.name`, `property.address`, `rental_agreement.rent_cold`
+- die Kombination `document_type`, `template_type`, `locale` und `version` muss eindeutig sein
+- beim Aktivieren einer Vorlage werden andere aktive Vorlagen derselben Kombination aus `document_type`, `template_type` und `locale` automatisch archiviert
+- aktive Vorlagen koennen nicht direkt geloescht werden; sie muessen vorher archiviert werden
+- erzeugte Dokumentversionen behalten ihren `template_snapshot`, auch wenn die Vorlage spaeter geaendert oder archiviert wird
 
 Beim Anlegen gilt:
 
