@@ -25,6 +25,10 @@
 ### Nächste mögliche Schritte
 
 - Schlanken Neustart-Kontext für Frontend/KI festlegen: zuerst `TODO.md`, dann `docs/api-overview.md`, `docs/openapi.yaml` und bei Bedarf die Modulnotizen.
+- Datenlücken aus echter Mietvertragsvorlage schließen: Bankverbindung/Zahlungsempfänger, zusätzliche Objekt-/Übergabedaten, Anlagen, Hausordnung und Energieausweis fachlich modellieren.
+- Bankverbindungen bzw. Zahlungsempfänger als Backend-Konzept planen und später als Snapshot in Vertragsdokumente übernehmen.
+- Placeholder-Whitelist und Dokument-Snapshot für echte Vertragsvorlagen erweitern.
+- Robusten mehrseitigen PDF-Renderer für echte Vertragsdokumente vorbereiten; der aktuelle Renderer reicht nur für die technische Pipeline.
 - Frontend-Admin-Oberfläche für Dokumentvorlagen bauen.
 - Paket 8 abrunden: Listenfilter und optionale Response-Includes für wiederkehrende Frontend-Ansichten schärfen.
 

@@ -227,6 +227,43 @@ sondern als editierbares Vertragsmodell mit Abschnitten. Fuer den Start reicht
 aber eine einfache Text- oder HTML-basierte Bearbeitung, solange Platzhalter
 klar sichtbar sind.
 
+## Erkenntnisse aus echter Vertragsvorlage
+
+Eine erste laengere Vorlage liegt unter
+`docs/templates/wohnraummietvertrag-template.de.txt`. Sie ist bewusst als
+Arbeitsvorlage gedacht: Damit sehen Backend und Frontend nicht nur abstrakte
+Felder, sondern welche Daten ein echter Wohnraummietvertrag tatsaechlich
+braucht.
+
+Daraus ergeben sich klare Datenluecken und naechste Schritte:
+
+- Bankverbindungen fehlen noch. Fuer echte Vertraege braucht es ein sauberes
+  Modell fuer Zahlungsempfaenger oder Bankkonten, z. B. `account_holder`,
+  `iban`, optional `bic`, `bank_name` und `is_default`.
+- Die Bankverbindung sollte nicht nur als Text in der Vorlage stehen. Beim
+  Erzeugen eines Dokuments muss sie wie Vertragsdaten als Snapshot gespeichert
+  werden, damit alte Vertraege stabil bleiben, wenn sich spaeter ein Konto
+  aendert.
+- Fuer Mietvertraege sollte es optional eine vertragsbezogene Zahlungsadresse
+  bzw. ein `bank_account_id` geben. Standard kann das Vermieter- oder
+  Organisationskonto sein, der Vertrag darf aber bewusst ein anderes Konto
+  referenzieren.
+- Die Placeholder-Liste und die Snapshot-Erzeugung muessen erweitert werden,
+  bevor Bankdaten in Templates als `{{ ... }}`-Platzhalter genutzt werden
+  koennen.
+- Objekt- und Vertragsdaten reichen fuer einen realen Vertrag noch nicht ganz:
+  Wohnflaeche, Zimmer, Etage, mitvermietete Raeume/Stellplaetze,
+  Uebergabeprotokoll, Schluessel, Zaehlerstaende, Anlagen, Hausordnung,
+  Energieausweis und individuelle Klauseln sollten fachlich eingeordnet werden.
+- Die aktuelle einfache PDF-Erzeugung reicht fuer die technische Pipeline, aber
+  nicht fuer echte mehrseitige Vertragsdokumente. Fuer produktive
+  Mietvertraege braucht das Documents-Modul einen robusten mehrseitigen
+  HTML/PDF-Renderer.
+
+Diese Punkte sind kein Widerspruch zum bestehenden Modell. Die Vorlage zeigt
+vielmehr, welche fachlichen Daten als naechstes strukturiert werden muessen,
+damit Templates spaeter professionell und wiederverwendbar bleiben.
+
 ## Branding und Logo
 
 Wenn der Vermieter zu einer Firma oder Organisation gehoert, soll das Dokument
@@ -406,9 +443,12 @@ Die ersten Backend-Schritte sind umgesetzt:
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
-2. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
-3. Faellige Reminder spaeter per Command/Job automatisch melden.
+1. Bankverbindungen bzw. Zahlungsempfaenger modellieren und in
+   Mietvertrag-/Dokument-Snapshots aufnehmen.
+2. Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
+3. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
+4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
+5. Faellige Reminder spaeter per Command/Job automatisch melden.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
