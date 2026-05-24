@@ -76,6 +76,11 @@ class User extends Authenticatable
         return $this->belongsTo(Organization::class);
     }
 
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(BankAccount::class);
+    }
+
     public function properties(): BelongsToMany
     {
         return $this->belongsToMany(Property::class)

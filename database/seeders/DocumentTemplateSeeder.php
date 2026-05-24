@@ -33,6 +33,9 @@ class DocumentTemplateSeeder extends Seeder
 <p>Kaltmiete: {{ rental_agreement.rent_cold }} {{ rental_agreement.currency }}</p>
 <p>Warmmiete: {{ rental_agreement.rent_warm }} {{ rental_agreement.currency }}</p>
 <p>Kaution: {{ rental_agreement.deposit }} {{ rental_agreement.currency }}</p>
+<p>Zahlungsempfänger: {{ bank_account.account_holder }}</p>
+<p>IBAN: {{ bank_account.iban }}</p>
+<p>BIC: {{ bank_account.bic }}</p>
 <p>Ort und Datum Vermieter: ______________________________</p>
 <p>Unterschrift Vermieter: _______________________________</p>
 <p>Ort und Datum Mieter: _________________________________</p>
@@ -50,6 +53,9 @@ HTML,
                     'rental_agreement.rent_warm',
                     'rental_agreement.deposit',
                     'rental_agreement.currency',
+                    'bank_account.account_holder',
+                    'bank_account.iban',
+                    'bank_account.bic',
                 ],
                 'metadata' => [
                     'description' => 'Erste Standardvorlage fuer Mietvertragsdokumente.',

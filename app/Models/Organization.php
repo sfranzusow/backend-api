@@ -24,4 +24,9 @@ class Organization extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(BankAccount::class);
+    }
 }

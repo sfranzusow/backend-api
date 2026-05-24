@@ -30,7 +30,7 @@ class RentalAgreementController extends Controller
         $authUser = $request->user();
 
         $agreements = RentalAgreement::query()
-            ->with(['property.address', 'landlord:id,name,email', 'tenant:id,name,email'])
+            ->with(['property.address', 'landlord:id,name,email', 'tenant:id,name,email', 'bankAccount'])
             ->when(! $authUser->hasRole('admin'), function ($query) use ($authUser) {
                 if ($authUser->hasRole('landlord')) {
                     $query->where('landlord_id', $authUser->id);
@@ -52,7 +52,7 @@ class RentalAgreementController extends Controller
     public function store(StoreRentalAgreementRequest $request): JsonResponse
     {
         $agreement = RentalAgreement::query()->create($request->validated());
-        $agreement->load(['property.address', 'landlord:id,name,email', 'tenant:id,name,email']);
+        $agreement->load(['property.address', 'landlord:id,name,email', 'tenant:id,name,email', 'bankAccount']);
 
         return response()->json([
             'data' => new RentalAgreementResource($agreement),
@@ -63,7 +63,7 @@ class RentalAgreementController extends Controller
     {
         $this->authorize('view', $rentalAgreement);
 
-        $rentalAgreement->loadMissing(['property.address', 'landlord:id,name,email', 'tenant:id,name,email']);
+        $rentalAgreement->loadMissing(['property.address', 'landlord:id,name,email', 'tenant:id,name,email', 'bankAccount']);
 
         return response()->json([
             'data' => new RentalAgreementResource($rentalAgreement),
@@ -74,7 +74,7 @@ class RentalAgreementController extends Controller
     {
         $rentalAgreement->fill($request->validated());
         $rentalAgreement->save();
-        $rentalAgreement->load(['property.address', 'landlord:id,name,email', 'tenant:id,name,email']);
+        $rentalAgreement->load(['property.address', 'landlord:id,name,email', 'tenant:id,name,email', 'bankAccount']);
 
         return response()->json([
             'data' => new RentalAgreementResource($rentalAgreement),

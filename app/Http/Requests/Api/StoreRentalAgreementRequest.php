@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use App\Enums\RoleName;
+use App\Models\BankAccount;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -26,6 +27,7 @@ class StoreRentalAgreementRequest extends FormRequest
             'property_id' => ['required', 'integer', Rule::exists('properties', 'id')],
             'landlord_id' => ['required', 'integer', Rule::exists('users', 'id'), 'different:tenant_id'],
             'tenant_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'bank_account_id' => ['nullable', 'integer', Rule::exists('bank_accounts', 'id')],
             'date_from' => ['required', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'rent_cold' => ['required', 'numeric', 'min:0'],
@@ -50,6 +52,7 @@ class StoreRentalAgreementRequest extends FormRequest
                 }
 
                 $authUser = $this->user();
+                $this->validateBankAccountOwnership($validator);
 
                 if ($authUser === null || $authUser->hasRole(RoleName::Admin->value)) {
                     return;
@@ -64,6 +67,17 @@ class StoreRentalAgreementRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    private function validateBankAccountOwnership(Validator $validator): void
+    {
+        if (! $this->filled('bank_account_id')) {
+            return;
+        }
+
+        if (! BankAccount::existsForLandlord($this->integer('bank_account_id'), $this->integer('landlord_id'))) {
+            $validator->errors()->add('bank_account_id', 'The bank account must belong to the selected landlord or their organization.');
+        }
     }
 
     private function authenticatedLandlordManagesProperty(int $propertyId): bool

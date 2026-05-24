@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\RoleName;
+use App\Models\BankAccount;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use App\Models\User;
@@ -36,6 +37,58 @@ class RentalAgreementApiTest extends TestCase
             'rent_cold' => 900,
             'status' => 'draft',
         ])->assertCreated()->assertJsonPath('data.property_id', $property->id);
+    }
+
+    public function test_landlord_can_create_rental_agreement_with_own_bank_account(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $tenant = User::factory()->create();
+        $bankAccount = BankAccount::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => null,
+            'account_holder' => 'Erika Vermieter',
+            'iban' => 'DE89370400440532013000',
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/rental-agreements', [
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'tenant_id' => $tenant->id,
+            'bank_account_id' => $bankAccount->id,
+            'date_from' => '2026-01-01',
+            'rent_cold' => 900,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.bank_account_id', $bankAccount->id)
+            ->assertJsonPath('data.bank_account.account_holder', 'Erika Vermieter')
+            ->assertJsonPath('data.bank_account.iban', 'DE89370400440532013000');
+
+        $this->assertDatabaseHas('rental_agreements', [
+            'landlord_id' => $user->id,
+            'bank_account_id' => $bankAccount->id,
+        ]);
+    }
+
+    public function test_rental_agreement_rejects_foreign_bank_account(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $tenant = User::factory()->create();
+        $foreignBankAccount = BankAccount::factory()->create();
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/rental-agreements', [
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'tenant_id' => $tenant->id,
+            'bank_account_id' => $foreignBankAccount->id,
+            'date_from' => '2026-01-01',
+            'rent_cold' => 900,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['bank_account_id']);
     }
 
     public function test_landlord_cannot_create_rental_agreement_for_another_landlord(): void

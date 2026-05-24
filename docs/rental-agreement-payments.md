@@ -23,6 +23,13 @@ technisch dieselbe Grundidee: eine geplante oder tatsaechliche Geldbewegung.
 - optional `payer_id` und `payee_id`
 - optional `description` und `metadata`
 
+Der Zahlungsempfaenger fuer einen Mietvertrag wird nicht als IBAN im `Payment`
+gespeichert. Dafuer gibt es `bank_accounts`, die einem Benutzer oder einer
+Organisation gehoeren und optional ueber `rental_agreements.bank_account_id`
+am Mietvertrag referenziert werden. Payments bleiben die fachlichen
+Geldbewegungen; Bankkonten sind Stammdaten und werden fuer Vertragsdokumente
+als Snapshot gespeichert.
+
 Aktuelle Typen:
 
 - `rent`: Miete

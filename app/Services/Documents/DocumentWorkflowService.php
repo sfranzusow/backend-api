@@ -42,7 +42,7 @@ class DocumentWorkflowService
                 ]);
             }
 
-            $rentalAgreement->loadMissing(['property.address', 'landlord', 'tenant']);
+            $rentalAgreement->loadMissing(['property.address', 'landlord', 'tenant', 'bankAccount']);
             $template = $this->activeTemplateFor($document);
 
             if (! $template instanceof DocumentTemplate) {

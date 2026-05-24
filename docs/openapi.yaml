@@ -25,6 +25,7 @@ tags:
   - name: Auth
   - name: Users
   - name: Addresses
+  - name: BankAccounts
   - name: Properties
   - name: RentalAgreements
   - name: Documents
@@ -475,6 +476,209 @@ paths:
       summary: Adresse löschen
       description: |
         Nur für `admin` oder `landlord` bei eigenen Objekt-Adressen.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bank-accounts:
+    get:
+      tags: [BankAccounts]
+      summary: Bankkonten / Zahlungsempfaenger listen
+      description: |
+        `admin` sieht alle Bankkonten.
+        `landlord` sieht Bankkonten, die ihm selbst oder seiner Organisation
+        zugeordnet sind.
+        `tenant` und `user` haben keinen Zugriff auf die Bankkonto-Verwaltung.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: organization_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: is_default
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAccountPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [BankAccounts]
+      summary: Bankkonto / Zahlungsempfaenger anlegen
+      description: |
+        Erstellt ein Bankkonto fuer einen Benutzer oder eine Organisation.
+        Genau eines von `user_id` oder `organization_id` muss gesetzt sein.
+        `landlord` darf nur eigene Bankkonten oder Konten der eigenen
+        Organisation anlegen. `admin` darf alle Bankkonten anlegen.
+
+        Wenn `is_default=true` gesetzt wird, werden andere Default-Konten
+        desselben Besitzers automatisch deaktiviert.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreBankAccountRequest'
+      responses:
+        '201':
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /bank-accounts/{bank_account}:
+    parameters:
+      - name: bank_account
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [BankAccounts]
+      summary: Bankkonto anzeigen
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [BankAccounts]
+      summary: Bankkonto ersetzen
+      description: Entspricht fachlich derselben Update-Logik wie `PATCH`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankAccountRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [BankAccounts]
+      summary: Bankkonto aktualisieren
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankAccountRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [BankAccounts]
+      summary: Bankkonto loeschen
+      description: |
+        Loescht ein Bankkonto. Mietvertraege, die dieses Konto referenzieren,
+        behalten ihre Dokument-Snapshots, die Live-Relation wird aber auf `null`
+        gesetzt.
       security:
         - sanctumBearer: []
       responses:
@@ -2110,6 +2314,71 @@ components:
           type: string
           format: date-time
 
+    BankAccount:
+      type: object
+      description: |
+        Zahlungsempfaenger / Bankkonto fuer Mietvertraege. Genau eines von
+        `user_id` oder `organization_id` ist gesetzt. Mietvertraege koennen
+        optional ein Bankkonto referenzieren; Dokumentversionen speichern die
+        Bankdaten im Snapshot.
+      required: [id, user_id, organization_id, account_holder, iban, is_default, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+          nullable: true
+        organization_id:
+          type: integer
+          nullable: true
+        account_holder:
+          type: string
+          example: Erika Vermieter
+        iban:
+          type: string
+          example: DE89370400440532013000
+        bic:
+          type: string
+          nullable: true
+          example: COBADEFFXXX
+        bank_name:
+          type: string
+          nullable: true
+          example: Musterbank
+        is_default:
+          type: boolean
+          default: false
+        user:
+          allOf:
+            - $ref: '#/components/schemas/User'
+          nullable: true
+        organization:
+          allOf:
+            - $ref: '#/components/schemas/Organization'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BankAccountPaginator:
+      type: object
+      description: Laravel paginierte Resource-Collection (data + links + meta)
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankAccount'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
     User:
       type: object
       description: |
@@ -2177,6 +2446,77 @@ components:
         email:
           type: string
           format: email
+
+    StoreBankAccountRequest:
+      type: object
+      description: |
+        Erstellt ein Bankkonto. Genau eines von `user_id` oder `organization_id`
+        muss gesetzt sein. `iban` und `bic` werden serverseitig ohne Leerzeichen
+        und in Grossbuchstaben gespeichert.
+      required: [account_holder, iban]
+      properties:
+        user_id:
+          type: integer
+          nullable: true
+          description: Besitzer als Benutzer; genau eines von `user_id`/`organization_id`.
+        organization_id:
+          type: integer
+          nullable: true
+          description: Besitzer als Organisation; genau eines von `user_id`/`organization_id`.
+        account_holder:
+          type: string
+          maxLength: 255
+          example: Erika Vermieter
+        iban:
+          type: string
+          maxLength: 34
+          pattern: '^[A-Z]{2}[0-9A-Z]{13,32}$'
+          example: DE89370400440532013000
+        bic:
+          type: string
+          nullable: true
+          maxLength: 11
+          pattern: '^[A-Z0-9]{8}([A-Z0-9]{3})?$'
+          example: COBADEFFXXX
+        bank_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_default:
+          type: boolean
+          default: false
+
+    UpdateBankAccountRequest:
+      type: object
+      description: |
+        Aktualisiert ein Bankkonto. Alle Felder sind optional. Wird
+        `is_default=true` gesetzt, deaktiviert der Server andere Default-Konten
+        desselben Besitzers.
+      properties:
+        user_id:
+          type: integer
+          nullable: true
+        organization_id:
+          type: integer
+          nullable: true
+        account_holder:
+          type: string
+          maxLength: 255
+        iban:
+          type: string
+          maxLength: 34
+          pattern: '^[A-Z]{2}[0-9A-Z]{13,32}$'
+        bic:
+          type: string
+          nullable: true
+          maxLength: 11
+          pattern: '^[A-Z0-9]{8}([A-Z0-9]{3})?$'
+        bank_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_default:
+          type: boolean
 
     StoreUserRequest:
       type: object
@@ -2602,7 +2942,7 @@ components:
 
     RentalAgreement:
       type: object
-      required: [id, property_id, landlord_id, tenant_id, date_from, rent_cold, currency, status, actions, created_at, updated_at]
+      required: [id, property_id, landlord_id, tenant_id, bank_account_id, date_from, rent_cold, currency, status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -2612,6 +2952,10 @@ components:
           type: integer
         tenant_id:
           type: integer
+        bank_account_id:
+          type: integer
+          nullable: true
+          description: Optionales Bankkonto fuer Zahlungen und Dokument-Snapshots.
         date_from:
           type: string
           format: date
@@ -2647,6 +2991,10 @@ components:
           $ref: '#/components/schemas/UserSummary'
         tenant:
           $ref: '#/components/schemas/UserSummary'
+        bank_account:
+          allOf:
+            - $ref: '#/components/schemas/BankAccount'
+          nullable: true
         payments:
           type: array
           items:
@@ -2694,6 +3042,10 @@ components:
           description: Für `landlord` muss dies die eigene Benutzer-ID sein.
         tenant_id:
           type: integer
+        bank_account_id:
+          type: integer
+          nullable: true
+          description: Muss zum Vermieter oder dessen Organisation gehoeren.
         date_from:
           type: string
           format: date
@@ -2743,6 +3095,10 @@ components:
           description: Für `landlord` muss dies die eigene Benutzer-ID bleiben.
         tenant_id:
           type: integer
+        bank_account_id:
+          type: integer
+          nullable: true
+          description: Muss zum effektiven Vermieter oder dessen Organisation gehoeren.
         date_from:
           type: string
           format: date
@@ -3186,7 +3542,8 @@ components:
 
         Fuer `rental_agreement_contract` sind aktuell nur die im Snapshot
         vorhandenen Pfade erlaubt, z. B. `document.title`, `tenant.name`,
-        `landlord.name`, `property.address`, `rental_agreement.rent_cold`.
+        `landlord.name`, `property.address`, `rental_agreement.rent_cold`
+        oder `bank_account.iban`.
       required: [name, document_type]
       properties:
         name:

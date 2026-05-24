@@ -112,6 +112,23 @@ class DocumentTemplateApiTest extends TestCase
             ->assertJsonValidationErrors('placeholders');
     }
 
+    public function test_bank_account_placeholders_are_allowed_for_rental_agreement_templates(): void
+    {
+        $admin = $this->userWithRole(RoleName::Admin);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/document-templates', [
+                'name' => 'Mietvertrag mit Zahlungsempfaenger',
+                'document_type' => DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT,
+                'version' => 3,
+                'content' => '<p>{{ bank_account.account_holder }} {{ bank_account.iban }} {{ bank_account.bic }}</p>',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.placeholders.0', 'bank_account.account_holder')
+            ->assertJsonPath('data.placeholders.1', 'bank_account.bic')
+            ->assertJsonPath('data.placeholders.2', 'bank_account.iban');
+    }
+
     public function test_activation_archives_older_active_templates_for_the_same_lookup(): void
     {
         $admin = $this->userWithRole(RoleName::Admin);

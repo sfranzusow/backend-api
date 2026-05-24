@@ -35,6 +35,7 @@ class RentalAgreement extends Model
         'property_id',
         'landlord_id',
         'tenant_id',
+        'bank_account_id',
         'date_from',
         'date_to',
         'rent_cold',
@@ -89,6 +90,11 @@ class RentalAgreement extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(User::class, 'tenant_id');
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function documents(): MorphMany

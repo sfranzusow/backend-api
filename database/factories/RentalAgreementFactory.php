@@ -21,6 +21,7 @@ class RentalAgreementFactory extends Factory
             'property_id' => Property::factory(),
             'landlord_id' => User::factory(),
             'tenant_id' => User::factory(),
+            'bank_account_id' => null,
             'date_from' => $dateFrom->format('Y-m-d'),
             'date_to' => $dateTo?->format('Y-m-d'),
             'rent_cold' => fake()->randomFloat(2, 300, 5000),

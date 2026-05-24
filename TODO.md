@@ -21,13 +21,15 @@
 - Paket 8 erster Schnitt umgesetzt: Mieter sehen Dokumente erst ab `shared`/`signed_uploaded`, dürfen signierte Dateien nur bei freigegebenen Dokumenten hochladen und sehen nur eigene Reminder-Zuweisungen; Vermieter/Admin behalten die vollständige Arbeitsakte.
 - Paket 8 vertieft: Dokument- und Mietvertrags-Responses liefern `actions` für Frontend-Buttons; reine Mieter-Sichten blenden interne Notizen, Template-/Snapshot-/Storage- und Creator-Felder aus.
 - Template-Verwaltung umgesetzt: Admin-API für Dokumentvorlagen mit CRUD, Aktivierung, Archivierung konkurrierender aktiver Vorlagen und Platzhaltervalidierung.
+- Bankverbindungen/Zahlungsempfänger umgesetzt: `BankAccount` für Benutzer oder Organisationen, CRUD-API für Admin/Landlord, optionale `bank_account_id` am Mietvertrag, Validierung gegen Vermieter/Organisation, Snapshot- und Placeholder-Erweiterung für Vertragsdokumente.
+- AGENTS.md erweitert: Laravel-Best-Practice-Regeln und class-basierter Teststil für Pest/PHPUnit-kompatible Tests festgehalten.
 
 ### Nächste mögliche Schritte
 
 - Schlanken Neustart-Kontext für Frontend/KI festlegen: zuerst `TODO.md`, dann `docs/api-overview.md`, `docs/openapi.yaml` und bei Bedarf die Modulnotizen.
-- Datenlücken aus echter Mietvertragsvorlage schließen: Bankverbindung/Zahlungsempfänger, zusätzliche Objekt-/Übergabedaten, Anlagen, Hausordnung und Energieausweis fachlich modellieren.
-- Bankverbindungen bzw. Zahlungsempfänger als Backend-Konzept planen und später als Snapshot in Vertragsdokumente übernehmen.
-- Placeholder-Whitelist und Dokument-Snapshot für echte Vertragsvorlagen erweitern.
+- Datenlücken aus echter Mietvertragsvorlage weiter schließen: zusätzliche Objekt-/Übergabedaten, Anlagen, Hausordnung und Energieausweis fachlich modellieren.
+- Frontend-Oberfläche für Bankkonten/Zahlungsempfänger und Auswahl am Mietvertrag bauen.
+- Placeholder-Whitelist und Dokument-Snapshot für weitere echte Vertragsvorlagen erweitern.
 - Robusten mehrseitigen PDF-Renderer für echte Vertragsdokumente vorbereiten; der aktuelle Renderer reicht nur für die technische Pipeline.
 - Frontend-Admin-Oberfläche für Dokumentvorlagen bauen.
 - Paket 8 abrunden: Listenfilter und optionale Response-Includes für wiederkehrende Frontend-Ansichten schärfen.

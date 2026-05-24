@@ -51,6 +51,13 @@ class RentalAgreementDocumentSnapshotFactory
             ],
             'landlord' => $this->userSnapshot($rentalAgreement->landlord),
             'tenant' => $this->userSnapshot($rentalAgreement->tenant),
+            'bank_account' => [
+                'id' => $rentalAgreement->bankAccount?->id,
+                'account_holder' => $rentalAgreement->bankAccount?->account_holder,
+                'iban' => $rentalAgreement->bankAccount?->iban,
+                'bic' => $rentalAgreement->bankAccount?->bic,
+                'bank_name' => $rentalAgreement->bankAccount?->bank_name,
+            ],
         ];
     }
 

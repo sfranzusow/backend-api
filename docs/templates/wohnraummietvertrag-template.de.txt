@@ -79,10 +79,11 @@ Die Miete ist monatlich im Voraus, spätestens bis zum dritten Werktag des
 jeweiligen Monats, zu zahlen.
 
 Zahlungsempfänger:
-{{ landlord.name }}
+{{ bank_account.account_holder }}
 
-IBAN: ____________________
-BIC: ____________________
+IBAN: {{ bank_account.iban }}
+BIC: {{ bank_account.bic }}
+Bank: {{ bank_account.bank_name }}
 Verwendungszweck: Mietvertrag {{ rental_agreement.id }} / {{ tenant.name }}
 
 Soweit Betriebskosten vereinbart sind, trägt der Mieter die umlagefähigen

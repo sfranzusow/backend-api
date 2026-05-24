@@ -9,6 +9,7 @@ Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 
 - `users`: Benutzerkonten und Rollen
 - `organizations`: Organisationen wie Verwaltungen oder Firmen, denen Benutzer optional zugeordnet sind
+- `bank_accounts`: Bankverbindungen/Zahlungsempfaenger von Benutzern oder Organisationen
 - `addresses`: Postadressen
 - `properties`: Immobilien bzw. Einheiten
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
@@ -85,6 +86,33 @@ Aktueller Stand:
 - `landlord` darf Adressen anlegen und nur die Adressen eigener Objekte sehen, aendern und loeschen
 - `tenant` und `user` duerfen keine Adressen ueber die API sehen
 
+### Bankkonten / Zahlungsempfaenger
+
+Die Bankkonto-API verwaltet Zahlungsempfaenger fuer Mietvertraege und
+Dokument-Snapshots.
+
+- `GET /bank-accounts`: Bankkonten listen
+- `POST /bank-accounts`: Bankkonto anlegen
+- `GET /bank-accounts/{bank_account}`: Bankkonto anzeigen
+- `PUT/PATCH /bank-accounts/{bank_account}`: Bankkonto aktualisieren
+- `DELETE /bank-accounts/{bank_account}`: Bankkonto loeschen
+
+Ein Bankkonto gehoert genau zu einem Besitzer:
+
+- entweder `user_id`
+- oder `organization_id`
+
+Aktueller Stand:
+
+- `admin` darf alle Bankkonten sehen und verwalten
+- `landlord` darf Bankkonten des eigenen Benutzers oder der eigenen
+  Organisation sehen und verwalten
+- `tenant` und `user` haben keinen Zugriff auf die Bankkonto-Verwaltung
+- `iban` und `bic` werden normalisiert und gross geschrieben
+- `is_default=true` deaktiviert andere Default-Konten desselben Besitzers
+- beim Loeschen eines Bankkontos wird die Live-Referenz am Mietvertrag auf
+  `null` gesetzt; erzeugte Dokumentversionen behalten ihre Snapshot-Daten
+
 ### Objekte / Immobilien
 
 Die Property-API ist der Kern der Immobilienlogik.
@@ -121,6 +149,7 @@ Ein Mietvertrag:
 - gehoert zu genau einem Objekt
 - referenziert genau einen `landlord`
 - referenziert genau einen `tenant`
+- kann optional ein `bank_account_id` als Zahlungsempfaenger referenzieren
 - kann Laufzeiten, Miete, Kaution und Status enthalten
 - kann generische Dokumentakten haben
 - kann generische Zahlungen/Forderungen haben
@@ -137,7 +166,9 @@ Wichtige Validierungsregeln fuer das Frontend:
 - neue Mietvertraege starten als `draft`; beim Anlegen ist `status` optional, aber nur `draft` erlaubt
 - fuer `landlord` muss `landlord_id` die ID des authentifizierten Benutzers sein
 - fuer `landlord` muss `property_id` auf ein Objekt zeigen, das dieser Benutzer als Vermieter verwaltet
+- `bank_account_id` ist optional, muss aber zum Vermieter oder dessen Organisation gehoeren
 - beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
+- beim Aktualisieren darf `bank_account_id` nicht auf ein fremdes Konto zeigen
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
 
 ### Zahlungen
@@ -203,6 +234,7 @@ Bei Vorlagen gilt:
 - `content` nutzt Platzhalter im Format `{{ tenant.name }}`
 - wenn `placeholders` nicht uebergeben wird, extrahiert der Server die Platzhalter aus `content`
 - unbekannte Platzhalter werden abgelehnt; fuer Mietvertragsvorlagen sind aktuell nur Pfade aus dem Mietvertrag-Snapshot erlaubt, z. B. `document.title`, `tenant.name`, `landlord.name`, `property.address`, `rental_agreement.rent_cold`
+- Bankkonto-Platzhalter wie `bank_account.account_holder`, `bank_account.iban`, `bank_account.bic` und `bank_account.bank_name` sind fuer Mietvertragsvorlagen erlaubt
 - die Kombination `document_type`, `template_type`, `locale` und `version` muss eindeutig sein
 - beim Aktivieren einer Vorlage werden andere aktive Vorlagen derselben Kombination aus `document_type`, `template_type` und `locale` automatisch archiviert
 - aktive Vorlagen koennen nicht direkt geloescht werden; sie muessen vorher archiviert werden
@@ -279,6 +311,7 @@ beschrieben. Die implementierten Dokument-Endpunkte stehen in `openapi.yaml`.
 - darf alle Properties sehen
 - darf alle Properties anlegen, bearbeiten und loeschen
 - darf Property-Mitglieder bei jedem Objekt verwalten
+- darf alle Bankkonten sehen und verwalten
 - darf alle Address-, Rental-Agreement- und Document-Endpunkte nutzen
 
 Einschraenkungen:
@@ -298,6 +331,7 @@ Einschraenkungen:
 - darf Mitglieder eines Objekts nur dann verwalten, wenn der Benutzer bei diesem Objekt als `landlord` eingetragen ist
 - darf Adressen eigener Objekte sehen, aendern und loeschen
 - darf neue Adressen anlegen
+- darf eigene und organisationsbezogene Bankkonten sehen und verwalten
 - darf nur eigene Mietvertraege sehen, anlegen, aendern und loeschen
 - darf Dokumente eigener Mietvertraege sehen, anlegen, erzeugen, freigeben, verwerfen, hochladen und herunterladen, wenn er das zugehoerige Objekt als Vermieter verwaltet
 - darf Fristen/Erinnerungen fuer diese Dokumente verwalten
@@ -314,6 +348,7 @@ Einschraenkungen:
 - darf Properties nicht bearbeiten oder loeschen
 - darf Property-Mitglieder nicht verwalten
 - darf keine Adressen sehen
+- darf keine Bankkonten ueber die Bankkonto-Verwaltung sehen
 - darf eigene Mietvertraege sehen
 - darf freigegebene oder unterschrieben hochgeladene Dokumente eigener Mietvertraege sehen/herunterladen
 - darf fuer eigene freigegebene Dokumente eine unterschriebene Datei hochladen
@@ -330,6 +365,7 @@ Einschraenkungen:
 - darf keine Properties sehen oder anlegen
 - darf keine Property-Mitglieder verwalten
 - darf keine Adressen sehen
+- darf keine Bankkonten sehen
 - darf keine Mietvertraege sehen
 - darf keine Dokumente sehen
 - darf keine Zahlungen sehen
@@ -338,6 +374,7 @@ Einschraenkungen:
 
 - `tenant` kann ein Property sehen, ohne dass dabei automatisch die zugehoerige Adresse im JSON erscheint
 - Mietvertraege enthalten fuer `tenant` weiterhin das Property, aber die verschachtelte Adresse wird ausgeblendet
+- Mietvertraege koennen fuer `tenant` ein verknuepftes `bank_account` enthalten, damit Zahlungsdaten sichtbar sind; die separate Bankkonto-Verwaltung bleibt trotzdem gesperrt
 - Dokumentlisten fuer `tenant` enthalten nur `shared` und `signed_uploaded`; das
   Frontend sollte `generated` nicht als Mieter-verfuegbar interpretieren
 - Reminder in Tenant-Responses sind eine persoenliche Aufgaben-/Hinweisliste,
@@ -421,6 +458,7 @@ Wenn du diese API an ein Frontend uebergibst, ist wichtig:
 - `TODO.md` enthaelt die kurze Paket-Roadmap fuer die naechsten Backend-Schritte
 - bei `properties` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff auf ein Objekt hat
 - bei `addresses`, `properties` und `rental-agreements` sollte das Frontend mit `403 Forbidden` rechnen, wenn ein Benutzer fachlich keinen Zugriff hat
+- bei `bank-accounts` duerfen Landlords nur eigene oder organisationsbezogene Konten verwalten; fremde Konten liefern `403` oder Validierungsfehler
 - bei `documents` sollte das Frontend ebenfalls mit `403 Forbidden` rechnen, wenn der Benutzer keinen Zugriff auf das verknuepfte Fachobjekt hat
 - bei `payments` sollte das Frontend zwischen `type`, `direction` und `status` unterscheiden; Kaution, Rueckzahlung und Miete sind derselbe technische Kern
 - Roadmap-Endpunkte aus `rental-agreement-documents.md` sind erst nutzbar, wenn sie auch in `openapi.yaml` stehen

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\DocumentReminderController;
 use App\Http\Controllers\Api\DocumentTemplateController;
@@ -27,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('users', UserController::class);
     Route::apiResource('addresses', AddressController::class);
+    Route::apiResource('bank-accounts', BankAccountController::class);
     Route::apiResource('properties', PropertyController::class);
     Route::put('/properties/{property}/members', [PropertyMemberController::class, 'sync']);
     Route::apiResource('rental-agreements', RentalAgreementController::class);

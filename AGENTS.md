@@ -35,6 +35,19 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## Laravel Best Practices
+
+- Keep controllers thin: authorize, validate, call the model/service layer, and return Resources or JSON responses.
+- Prefer Form Request classes for API validation and authorization when request rules are non-trivial.
+- Prefer Policies over inline role checks for resource access. Inline role checks are acceptable only when shaping query visibility or response fields.
+- Use Eloquent relationships, scopes, eager loading, and Resources instead of hand-assembled response arrays when the domain already has models.
+- Avoid N+1 queries by loading relationships explicitly in controllers/services before building Resources or snapshots.
+- Use database transactions for multi-step writes that must remain consistent, such as workflow transitions, default selection, or related records.
+- Keep migrations reversible and explicit about foreign key delete behavior.
+- Normalize user input in Form Requests when the normalized value is what the application should store, e.g. uppercasing ISO codes or bank identifiers.
+- Prefer server-side validation for workflow and ownership rules even when the frontend can hide invalid actions.
+- Do not add new dependencies or base architecture folders without explicit approval.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
@@ -138,6 +151,11 @@ This project has domain-specific skills available. You MUST activate the relevan
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
 - When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+- This project uses Pest, but tests should be written as class-based tests extending `Tests\TestCase`, matching the existing `tests/Feature` style. Do not leave free-floating `test()` or `it()` functions in new test files.
+- Put API tests under `tests/Feature/Api` and model/relationship tests under `tests/Feature` unless the existing sibling files show a better local pattern.
+- Use `RefreshDatabase` for tests that touch the database, seed `RolesAndPermissionsSeeder` when role behavior is part of the test, and authenticate API requests with `actingAs($user, 'sanctum')`.
+- Prefer Laravel response assertions such as `assertOk`, `assertCreated`, `assertForbidden`, `assertUnauthorized`, `assertUnprocessable`, `assertJsonPath`, and `assertJsonValidationErrors`.
+- Keep each test focused on one behavior: permission, validation, defaulting, visibility, workflow transition, or response shape.
 
 ## Vite Error
 

@@ -97,6 +97,11 @@ Mietvertrag zu speichern.
 
 Aktuell implementierte Endpunkte:
 
+- `GET /bank-accounts`: Bankkonten/Zahlungsempfaenger listen
+- `POST /bank-accounts`: Bankkonto/Zahlungsempfaenger anlegen
+- `GET /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger anzeigen
+- `PUT/PATCH /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger aktualisieren
+- `DELETE /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger loeschen
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
@@ -221,6 +226,8 @@ Beispiele fuer Platzhalter:
 - `{{ rental_agreement.date_from }}`
 - `{{ rental_agreement.rent_cold }}`
 - `{{ rental_agreement.deposit }}`
+- `{{ bank_account.account_holder }}`
+- `{{ bank_account.iban }}`
 
 Das Frontend sollte Vorlagen spaeter nicht als beliebige Datei behandeln,
 sondern als editierbares Vertragsmodell mit Abschnitten. Fuer den Start reicht
@@ -237,20 +244,17 @@ braucht.
 
 Daraus ergeben sich klare Datenluecken und naechste Schritte:
 
-- Bankverbindungen fehlen noch. Fuer echte Vertraege braucht es ein sauberes
-  Modell fuer Zahlungsempfaenger oder Bankkonten, z. B. `account_holder`,
-  `iban`, optional `bic`, `bank_name` und `is_default`.
-- Die Bankverbindung sollte nicht nur als Text in der Vorlage stehen. Beim
-  Erzeugen eines Dokuments muss sie wie Vertragsdaten als Snapshot gespeichert
-  werden, damit alte Vertraege stabil bleiben, wenn sich spaeter ein Konto
+- Bankverbindungen sind jetzt als `bank_accounts` modelliert. Ein Konto gehoert
+  entweder zu einem Benutzer oder zu einer Organisation und enthaelt
+  `account_holder`, `iban`, optional `bic`, `bank_name` und `is_default`.
+- Mietvertraege koennen optional `bank_account_id` referenzieren. Dieses Konto
+  muss zum Vermieter oder dessen Organisation gehoeren.
+- Beim Erzeugen eines Dokuments werden Bankdaten wie Vertragsdaten als Snapshot
+  gespeichert, damit alte Vertraege stabil bleiben, wenn sich spaeter ein Konto
   aendert.
-- Fuer Mietvertraege sollte es optional eine vertragsbezogene Zahlungsadresse
-  bzw. ein `bank_account_id` geben. Standard kann das Vermieter- oder
-  Organisationskonto sein, der Vertrag darf aber bewusst ein anderes Konto
-  referenzieren.
-- Die Placeholder-Liste und die Snapshot-Erzeugung muessen erweitert werden,
-  bevor Bankdaten in Templates als `{{ ... }}`-Platzhalter genutzt werden
-  koennen.
+- Die Placeholder-Liste und Snapshot-Erzeugung enthalten Bankdaten, z. B.
+  `bank_account.account_holder`, `bank_account.iban`, `bank_account.bic` und
+  `bank_account.bank_name`.
 - Objekt- und Vertragsdaten reichen fuer einen realen Vertrag noch nicht ganz:
   Wohnflaeche, Zimmer, Etage, mitvermietete Raeume/Stellplaetze,
   Uebergabeprotokoll, Schluessel, Zaehlerstaende, Anlagen, Hausordnung,
@@ -443,9 +447,8 @@ Die ersten Backend-Schritte sind umgesetzt:
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Bankverbindungen bzw. Zahlungsempfaenger modellieren und in
-   Mietvertrag-/Dokument-Snapshots aufnehmen.
-2. Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
+1. Frontend-Admin-/Vermieter-Oberflaeche fuer Bankkonten und Vorlagenauswahl bauen.
+2. Weitere Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
 3. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
 4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
 5. Faellige Reminder spaeter per Command/Job automatisch melden.
@@ -597,6 +600,30 @@ Weiterer geplanter Umfang:
   schaerfen
 - OpenAPI-Beispiele fuer typische Vermieter- und Mieter-Responses ergaenzen,
   wenn die Endpunkte stabil sind
+
+### Paket 9: Bankverbindungen und Zahlungsempfaenger
+
+Ziel: Mietvertragsdokumente sollen echte Zahlungsdaten aus strukturierten
+Backend-Daten erhalten, ohne IBAN/BIC als freien Template-Text zu pflegen.
+
+Umgesetzt:
+
+- `BankAccount` als Zahlungsempfaenger fuer Benutzer oder Organisationen
+- Admin-/Landlord-API zum Listen, Anlegen, Anzeigen, Aktualisieren und Loeschen
+- `is_default` pro Besitzer, wobei neue Defaults andere Default-Konten
+  desselben Besitzers deaktivieren
+- optionale `bank_account_id` am Mietvertrag
+- Validierung, dass ein Mietvertragskonto zum Vermieter oder dessen
+  Organisation gehoert
+- Dokument-Snapshot mit `bank_account.account_holder`, `iban`, `bic` und
+  `bank_name`
+- Placeholder-Whitelist fuer Bankkonto-Platzhalter erweitert
+
+Noch offen:
+
+- Frontend-Auswahl und Vorbelegung fuer Bankkonten
+- Produktentscheidung, ob beim Anlegen eines Mietvertrags automatisch ein
+  Default-Konto vorausgewaehlt oder nur frontendseitig vorgeschlagen wird
 
 ## Frontend-Uebergabe
 

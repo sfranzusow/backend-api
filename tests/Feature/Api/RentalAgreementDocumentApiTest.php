@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\RoleName;
+use App\Models\BankAccount;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\DocumentReminder;
@@ -520,10 +521,18 @@ class RentalAgreementDocumentApiTest extends TestCase
         $user->assignRole(RoleName::Landlord->value);
         $tenant = User::factory()->create(['name' => 'Max Mieter']);
         $property = $this->propertyManagedBy($user);
+        $bankAccount = BankAccount::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => null,
+            'account_holder' => 'Erika Vermieter',
+            'iban' => 'DE89370400440532013000',
+            'bic' => 'COLSDEDDXXX',
+        ]);
         $agreement = RentalAgreement::factory()->create([
             'property_id' => $property->id,
             'landlord_id' => $user->id,
             'tenant_id' => $tenant->id,
+            'bank_account_id' => $bankAccount->id,
             'date_from' => '2026-06-01',
             'date_to' => null,
             'rent_cold' => '900.00',
@@ -534,7 +543,7 @@ class RentalAgreementDocumentApiTest extends TestCase
         $template = DocumentTemplate::factory()->create([
             'document_type' => 'rental_agreement_contract',
             'status' => DocumentTemplate::STATUS_ACTIVE,
-            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ rental_agreement.rent_cold }}</p>',
+            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ rental_agreement.rent_cold }}</p><p>{{ bank_account.iban }}</p>',
         ]);
         $document = Document::factory()->create([
             'documentable_type' => RentalAgreement::class,
@@ -555,8 +564,10 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.latest_version.generated_by_id', $user->id)
             ->assertJsonPath('data.latest_version.data_snapshot.landlord.name', 'Erika Vermieter')
             ->assertJsonPath('data.latest_version.data_snapshot.tenant.name', 'Max Mieter')
+            ->assertJsonPath('data.latest_version.data_snapshot.bank_account.account_holder', 'Erika Vermieter')
+            ->assertJsonPath('data.latest_version.data_snapshot.bank_account.iban', 'DE89370400440532013000')
             ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.rent_cold', '900.00')
-            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>900.00</p>')
+            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>900.00</p><p>DE89370400440532013000</p>')
             ->assertJsonCount(1, 'data.latest_version.files');
 
         $filePath = $response->json('data.latest_version.files.0.path');

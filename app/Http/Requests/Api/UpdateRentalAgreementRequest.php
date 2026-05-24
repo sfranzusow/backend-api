@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use App\Enums\RoleName;
+use App\Models\BankAccount;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -29,6 +30,7 @@ class UpdateRentalAgreementRequest extends FormRequest
             'property_id' => ['sometimes', 'integer', Rule::exists('properties', 'id')],
             'landlord_id' => ['sometimes', 'integer', Rule::exists('users', 'id'), 'different:tenant_id'],
             'tenant_id' => ['sometimes', 'integer', Rule::exists('users', 'id')],
+            'bank_account_id' => ['sometimes', 'nullable', 'integer', Rule::exists('bank_accounts', 'id')],
             'date_from' => ['sometimes', 'date'],
             'date_to' => ['sometimes', 'nullable', 'date', 'after_or_equal:date_from'],
             'rent_cold' => ['sometimes', 'numeric', 'min:0'],
@@ -57,6 +59,7 @@ class UpdateRentalAgreementRequest extends FormRequest
 
                 $this->validateStatusTransition($validator, $rentalAgreement);
                 $this->validateAuthenticatedLandlordOwnership($validator);
+                $this->validateBankAccountOwnership($validator, $rentalAgreement);
             },
         ];
     }
@@ -70,6 +73,29 @@ class UpdateRentalAgreementRequest extends FormRequest
         }
 
         $validator->errors()->add('status', 'The selected status transition is invalid.');
+    }
+
+    private function validateBankAccountOwnership(Validator $validator, RentalAgreement $rentalAgreement): void
+    {
+        if (! $this->has('bank_account_id') && ! $this->has('landlord_id')) {
+            return;
+        }
+
+        $bankAccountId = $this->has('bank_account_id')
+            ? $this->input('bank_account_id')
+            : $rentalAgreement->bank_account_id;
+
+        if ($bankAccountId === null) {
+            return;
+        }
+
+        $landlordId = $this->has('landlord_id')
+            ? $this->integer('landlord_id')
+            : $rentalAgreement->landlord_id;
+
+        if (! BankAccount::existsForLandlord((int) $bankAccountId, $landlordId)) {
+            $validator->errors()->add('bank_account_id', 'The bank account must belong to the selected landlord or their organization.');
+        }
     }
 
     private function validateAuthenticatedLandlordOwnership(Validator $validator): void
