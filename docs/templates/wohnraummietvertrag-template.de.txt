@@ -1,11 +1,11 @@
-WOHNRAUMMIETVERTRAG
+<h1>WOHNRAUMMIETVERTRAG</h1>
 
-Dokument: {{ document.title }}
-Vertragsnummer / Akte: {{ document.id }}
+<strong>Dokument:</strong> {{ document.title }}
+<strong>Vertragsnummer / Akte:</strong> {{ document.id }}
 
 zwischen
 
-Vermieter:
+<strong>Vermieter:</strong>
 {{ landlord.name }}
 {{ landlord.address_street }} {{ landlord.address_house_number }}
 {{ landlord.address_zip_code }} {{ landlord.address_city }}
@@ -15,7 +15,7 @@ Telefon: {{ landlord.phone_number }}
 
 und
 
-Mieter:
+<strong>Mieter:</strong>
 {{ tenant.name }}
 {{ tenant.address_street }} {{ tenant.address_house_number }}
 {{ tenant.address_zip_code }} {{ tenant.address_city }}
@@ -25,66 +25,66 @@ Telefon: {{ tenant.phone_number }}
 
 gemeinsam auch "Parteien" genannt.
 
-1. Mietgegenstand
+<h2>1. Mietgegenstand</h2>
 
 Der Vermieter vermietet an den Mieter zu Wohnzwecken folgende Wohnung:
 
-Adresse: {{ property.address }}
-Einheit / Wohnungsnummer: {{ property.unit_number }}
-Objektart: {{ property.type }}
+<strong>Adresse:</strong> {{ property.address }}
+<strong>Einheit / Wohnungsnummer:</strong> {{ property.unit_number }}
+<strong>Objektart:</strong> {{ property.type }}
 
-Weitere Beschreibung des Mietgegenstands:
-- Wohnfläche: ____________________ m2
-- Zimmer: ____________________
-- Etage: ____________________
-- Mitvermietete Nebenräume / Stellplätze / Keller: ____________________
-- Mitbenutzungsrechte an Gemeinschaftsflächen: ____________________
+<strong>Weitere Beschreibung des Mietgegenstands:</strong>
+<strong>Wohnfläche:</strong> ____________________ m2
+<strong>Zimmer:</strong> ____________________
+<strong>Etage:</strong> ____________________
+<strong>Mitvermietete Nebenräume / Stellplätze / Keller:</strong> ____________________
+<strong>Mitbenutzungsrechte an Gemeinschaftsflächen:</strong> ____________________
 
 Die Wohnung wird ausschließlich zu Wohnzwecken überlassen. Eine andere Nutzung,
 insbesondere eine gewerbliche Nutzung, bedarf der vorherigen Zustimmung des
 Vermieters in Textform, soweit nicht zwingendes Recht etwas anderes bestimmt.
 
-2. Mietbeginn, Dauer und Übergabe
+<h2>2. Mietbeginn, Dauer und Übergabe</h2>
 
-Das Mietverhältnis beginnt am: {{ rental_agreement.date_from }}
+<strong>Das Mietverhältnis beginnt am:</strong> {{ rental_agreement.date_from }}
 
 Es läuft auf unbestimmte Zeit, sofern nachfolgend kein wirksam befristetes
 Mietverhältnis vereinbart ist.
 
-Vereinbartes Ende / Befristung, falls zutreffend: {{ rental_agreement.date_to }}
-Befristungsgrund, falls ein Zeitmietvertrag geschlossen wird: ____________________
+<strong>Vereinbartes Ende / Befristung, falls zutreffend:</strong> {{ rental_agreement.date_to }}
+<strong>Befristungsgrund, falls ein Zeitmietvertrag geschlossen wird:</strong> ____________________
 
 Bei Wohnraummietverhältnissen ist ein befristeter Mietvertrag nur unter den
 gesetzlichen Voraussetzungen zulässig. Fehlt ein wirksamer Befristungsgrund,
 gelten die gesetzlichen Regelungen.
 
-Die Übergabe erfolgt spätestens am: ____________________
+<strong>Die Übergabe erfolgt spätestens am:</strong> ____________________
 Die Parteien erstellen bei Übergabe ein Übergabeprotokoll. Darin werden Zustand,
 Zählerstände, übergebene Schlüssel, bekannte Mängel und mitüberlassene
 Einrichtungen dokumentiert. Das Übergabeprotokoll wird Bestandteil dieses
 Vertrags, soweit es von beiden Parteien unterzeichnet oder bestätigt wird.
 
-3. Miete und Betriebskosten
+<h2>3. Miete und Betriebskosten</h2>
 
-Die monatliche Nettokaltmiete beträgt:
+<strong>Die monatliche Nettokaltmiete beträgt:</strong>
 {{ rental_agreement.rent_cold }} {{ rental_agreement.currency }}
 
-Die monatliche Betriebskostenvorauszahlung beträgt:
+<strong>Die monatliche Betriebskostenvorauszahlung beträgt:</strong>
 {{ rental_agreement.service_charges }} {{ rental_agreement.currency }}
 
-Die monatliche Gesamtmiete / Warmmiete beträgt:
+<strong>Die monatliche Gesamtmiete / Warmmiete beträgt:</strong>
 {{ rental_agreement.rent_warm }} {{ rental_agreement.currency }}
 
 Die Miete ist monatlich im Voraus, spätestens bis zum dritten Werktag des
 jeweiligen Monats, zu zahlen.
 
-Zahlungsempfänger:
+<strong>Zahlungsempfänger:</strong>
 {{ bank_account.account_holder }}
 
-IBAN: {{ bank_account.iban }}
-BIC: {{ bank_account.bic }}
-Bank: {{ bank_account.bank_name }}
-Verwendungszweck: Mietvertrag {{ rental_agreement.id }} / {{ tenant.name }}
+<strong>IBAN:</strong> {{ bank_account.iban }}
+<strong>BIC:</strong> {{ bank_account.bic }}
+<strong>Bank:</strong> {{ bank_account.bank_name }}
+<strong>Verwendungszweck:</strong> Mietvertrag {{ rental_agreement.id }} / {{ tenant.name }}
 
 Soweit Betriebskosten vereinbart sind, trägt der Mieter die umlagefähigen
 Betriebskosten im Sinne der Betriebskostenverordnung, soweit diese tatsächlich
@@ -96,12 +96,12 @@ Soweit Heiz- und Warmwasserkosten verbrauchsabhängig abzurechnen sind, gelten
 die gesetzlichen Vorgaben. Die Parteien können im Rahmen des gesetzlich
 Zulässigen einen angemessenen Umlageschlüssel vereinbaren.
 
-Umlageschlüssel, falls nicht gesetzlich vorgegeben:
+<strong>Umlageschlüssel, falls nicht gesetzlich vorgegeben:</strong>
 ____________________
 
-4. Mietsicherheit / Kaution
+<h2>4. Mietsicherheit / Kaution</h2>
 
-Der Mieter leistet eine Mietsicherheit in Höhe von:
+<strong>Der Mieter leistet eine Mietsicherheit in Höhe von:</strong>
 {{ rental_agreement.deposit }} {{ rental_agreement.currency }}
 
 Die Mietsicherheit darf bei Wohnraum höchstens drei monatliche Nettokaltmieten
@@ -119,7 +119,7 @@ Mietverhältnis. Nach Beendigung des Mietverhältnisses wird sie nach Prüfung
 offener Ansprüche und unter Berücksichtigung zulässiger Zurückbehalte
 abgerechnet.
 
-5. Zustand der Wohnung, Instandhaltung und Mängel
+<h2>5. Zustand der Wohnung, Instandhaltung und Mängel</h2>
 
 Der Vermieter überlässt die Wohnung in einem zum vertragsgemäßen Gebrauch
 geeigneten Zustand und erhält sie während der Mietzeit in diesem Zustand, soweit
@@ -135,7 +135,7 @@ Untermieter oder sonstige Personen, denen er den Gebrauch ermöglicht, schuldhaf
 verursachen. Normale Abnutzung durch vertragsgemäßen Gebrauch ist keine
 Beschädigung.
 
-6. Schönheitsreparaturen
+<h2>6. Schönheitsreparaturen</h2>
 
 Schönheitsreparaturen sind nur geschuldet, soweit eine entsprechende
 Vereinbarung im Einzelfall wirksam ist und die Arbeiten nach dem tatsächlichen
@@ -143,28 +143,28 @@ Zustand der Wohnung erforderlich sind. Starre Fristen gelten nicht.
 
 Die Parteien können folgenden individuellen Zustand bei Übergabe festhalten:
 
-Die Wohnung wird übergeben als:
+<strong>Die Wohnung wird übergeben als:</strong>
 [ ] renoviert
 [ ] unrenoviert
 [ ] teilweise renoviert, nämlich: ____________________
 
-Besondere individuelle Vereinbarung zu Schönheitsreparaturen:
+<strong>Besondere individuelle Vereinbarung zu Schönheitsreparaturen:</strong>
 ____________________
 
-7. Kleinreparaturen
+<h2>7. Kleinreparaturen</h2>
 
 Soweit rechtlich zulässig, trägt der Mieter die Kosten kleiner
 Instandsetzungen an Teilen der Mietsache, die seinem häufigen und direkten
 Zugriff unterliegen, nur bis zu folgenden Grenzen:
 
-Höchstbetrag je Einzelfall: ____________________ EUR
-Höchstbetrag pro Kalenderjahr: ____________________ EUR
+<strong>Höchstbetrag je Einzelfall:</strong> ____________________ EUR
+<strong>Höchstbetrag pro Kalenderjahr:</strong> ____________________ EUR
 
 Eine Zahlungspflicht besteht nur, wenn die Klausel im konkreten Einzelfall
 wirksam ist. Reparaturen werden vom Vermieter beauftragt, sofern die Parteien
 nichts anderes ausdrücklich vereinbaren.
 
-8. Nutzung, Haushaltsangehörige und Untervermietung
+<h2>8. Nutzung, Haushaltsangehörige und Untervermietung</h2>
 
 Der Mieter darf die Wohnung mit den zu seinem Haushalt gehörenden Personen
 bewohnen. Eine dauerhafte Aufnahme weiterer Personen, die nicht nur
@@ -175,7 +175,7 @@ insbesondere Untervermietung, bedarf der vorherigen Erlaubnis des Vermieters,
 soweit gesetzlich nichts anderes gilt. Gesetzliche Ansprüche des Mieters auf
 Erlaubnis zur Gebrauchsüberlassung bleiben unberührt.
 
-9. Tierhaltung
+<h2>9. Tierhaltung</h2>
 
 Kleintiere, von denen üblicherweise keine Störungen oder Schäden ausgehen,
 dürfen im Rahmen des vertragsgemäßen Gebrauchs gehalten werden.
@@ -185,18 +185,18 @@ Abwägung im Einzelfall und der vorherigen Zustimmung des Vermieters in Textform
 Die Zustimmung darf nicht ohne sachlichen Grund verweigert werden. Gesetzliche
 Rechte bleiben unberührt.
 
-10. Hausordnung und Rücksichtnahme
+<h2>10. Hausordnung und Rücksichtnahme</h2>
 
 Der Mieter nimmt auf andere Bewohner, Nachbarn und das Gebäude Rücksicht. Eine
 Hausordnung kann beigefügt werden und gilt, soweit sie den vertragsgemäßen
 Gebrauch nicht unangemessen einschränkt und keine gesetzlichen Rechte
 beschneidet.
 
-Beigefügte Hausordnung:
+<strong>Beigefügte Hausordnung:</strong>
 [ ] ja
 [ ] nein
 
-11. Bauliche Veränderungen und Einbauten
+<h2>11. Bauliche Veränderungen und Einbauten</h2>
 
 Bauliche Veränderungen, Eingriffe in die Substanz, feste Einbauten,
 Antennenanlagen, Wallboxen, Markisen oder vergleichbare Maßnahmen bedürfen der
@@ -211,7 +211,7 @@ Vermieters zu entfernen und der ursprüngliche Zustand wiederherzustellen, sowei
 dies rechtlich zulässig vereinbart wurde und keine abweichende Vereinbarung
 besteht.
 
-12. Betreten der Wohnung
+<h2>12. Betreten der Wohnung</h2>
 
 Der Vermieter darf die Wohnung nur nach vorheriger Ankündigung und aus
 berechtigtem Anlass betreten, insbesondere zur Besichtigung von Mängeln,
@@ -223,14 +223,14 @@ Bei Gefahr im Verzug darf der Vermieter oder eine von ihm beauftragte Person
 die Wohnung auch ohne vorherige Terminvereinbarung betreten, soweit dies zur
 Gefahrenabwehr erforderlich ist.
 
-13. Modernisierung und Erhaltungsmaßnahmen
+<h2>13. Modernisierung und Erhaltungsmaßnahmen</h2>
 
 Erhaltungsmaßnahmen hat der Mieter nach den gesetzlichen Vorgaben zu dulden.
 Modernisierungsmaßnahmen richten sich nach den gesetzlichen Vorschriften,
 insbesondere hinsichtlich Ankündigung, Duldung, Härteeinwand und möglicher
 Mieterhöhung.
 
-14. Kündigung und Beendigung
+<h2>14. Kündigung und Beendigung</h2>
 
 Die ordentliche Kündigung richtet sich nach den gesetzlichen Vorschriften. Für
 Kündigungen gelten die gesetzlichen Form- und Fristvorgaben. Das Recht zur
@@ -240,7 +240,7 @@ Der Mieter gibt die Wohnung bei Beendigung des Mietverhältnisses vollständig
 geräumt, besenrein, mit sämtlichen Schlüsseln und in vertragsgemäßem Zustand
 zurück. Über die Rückgabe soll ein Rückgabeprotokoll erstellt werden.
 
-15. Mehrheit von Mietern oder Vermietern
+<h2>15. Mehrheit von Mietern oder Vermietern</h2>
 
 Sind mehrere Personen Mieter, haften sie für Verpflichtungen aus diesem Vertrag
 als Gesamtschuldner, soweit gesetzlich zulässig. Erklärungen eines Mieters sind
@@ -250,7 +250,7 @@ gesetzliche Vertretung vorliegt.
 Sind mehrere Personen Vermieter, können sie Rechte aus diesem Vertrag
 gemeinschaftlich ausüben, soweit keine Vertretung angezeigt wurde.
 
-16. Datenschutz und Kommunikation
+<h2>16. Datenschutz und Kommunikation</h2>
 
 Die Parteien verarbeiten personenbezogene Daten nur, soweit dies für Abschluss,
 Durchführung, Verwaltung und Beendigung des Mietverhältnisses erforderlich oder
@@ -260,17 +260,17 @@ Erklärungen in Textform können an die oben genannten E-Mail-Adressen gesendet
 werden, soweit gesetzlich nicht Schriftform oder eine strengere Form
 vorgeschrieben ist.
 
-17. Individuelle Vereinbarungen
+<h2>17. Individuelle Vereinbarungen</h2>
 
 Folgende individuelle Vereinbarungen gehen vor, soweit sie wirksam und eindeutig
 zwischen den Parteien getroffen wurden:
 
 {{ rental_agreement.notes }}
 
-Weitere individuelle Vereinbarungen:
+<strong>Weitere individuelle Vereinbarungen:</strong>
 ____________________
 
-18. Schlussbestimmungen
+<h2>18. Schlussbestimmungen</h2>
 
 Änderungen und Ergänzungen dieses Vertrags bedürfen der gesetzlich jeweils
 erforderlichen Form. Gesetzlich zwingende Rechte und Schutzvorschriften,
@@ -280,7 +280,7 @@ Sollten einzelne Bestimmungen dieses Vertrags unwirksam sein oder werden, bleibt
 die Wirksamkeit der übrigen Bestimmungen unberührt. An die Stelle der
 unwirksamen Bestimmung tritt die gesetzliche Regelung.
 
-19. Anlagen
+<h2>19. Anlagen</h2>
 
 Folgende Anlagen sind Bestandteil dieses Vertrags, soweit beigefügt:
 
@@ -291,16 +291,16 @@ Folgende Anlagen sind Bestandteil dieses Vertrags, soweit beigefügt:
 [ ] Selbstauskunft / besondere Vereinbarungen
 [ ] Sonstige Anlagen: ____________________
 
-20. Unterschriften
+<h2>20. Unterschriften</h2>
 
-Ort, Datum Vermieter:
+<strong>Ort, Datum Vermieter:</strong>
 ____________________
 
-Unterschrift Vermieter:
+<strong>Unterschrift Vermieter:</strong>
 ____________________
 
-Ort, Datum Mieter:
+<strong>Ort, Datum Mieter:</strong>
 ____________________
 
-Unterschrift Mieter:
+<strong>Unterschrift Mieter:</strong>
 ____________________
