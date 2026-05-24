@@ -34,9 +34,9 @@ Der Vermieter vermietet an den Mieter zu Wohnzwecken folgende Wohnung:
 <strong>Objektart:</strong> {{ property.type }}
 
 <strong>Weitere Beschreibung des Mietgegenstands:</strong>
-<strong>Wohnfläche:</strong> ____________________ m2
-<strong>Zimmer:</strong> ____________________
-<strong>Etage:</strong> ____________________
+<strong>Wohnfläche:</strong> {{ property.area_living }} m²
+<strong>Zimmer:</strong> {{ property.rooms }}
+<strong>Etage:</strong> {{ property.floor }}
 <strong>Mitvermietete Nebenräume / Stellplätze / Keller:</strong> ____________________
 <strong>Mitbenutzungsrechte an Gemeinschaftsflächen:</strong> ____________________
 

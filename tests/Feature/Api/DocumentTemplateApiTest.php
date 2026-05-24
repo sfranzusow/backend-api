@@ -129,6 +129,23 @@ class DocumentTemplateApiTest extends TestCase
             ->assertJsonPath('data.placeholders.2', 'bank_account.iban');
     }
 
+    public function test_property_detail_placeholders_are_allowed_for_rental_agreement_templates(): void
+    {
+        $admin = $this->userWithRole(RoleName::Admin);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/document-templates', [
+                'name' => 'Mietvertrag mit Objektdetails',
+                'document_type' => DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT,
+                'version' => 4,
+                'content' => '<p>{{ property.area_living }} {{ property.rooms }} {{ property.floor }}</p>',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.placeholders.0', 'property.area_living')
+            ->assertJsonPath('data.placeholders.1', 'property.floor')
+            ->assertJsonPath('data.placeholders.2', 'property.rooms');
+    }
+
     public function test_activation_archives_older_active_templates_for_the_same_lookup(): void
     {
         $admin = $this->userWithRole(RoleName::Admin);

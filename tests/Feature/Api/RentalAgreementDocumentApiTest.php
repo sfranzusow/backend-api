@@ -521,6 +521,11 @@ class RentalAgreementDocumentApiTest extends TestCase
         $user->assignRole(RoleName::Landlord->value);
         $tenant = User::factory()->create(['name' => 'Max Mieter']);
         $property = $this->propertyManagedBy($user);
+        $property->forceFill([
+            'area_living' => '82.50',
+            'rooms' => 3,
+            'floor' => 2,
+        ])->save();
         $bankAccount = BankAccount::factory()->create([
             'user_id' => $user->id,
             'organization_id' => null,
@@ -543,7 +548,7 @@ class RentalAgreementDocumentApiTest extends TestCase
         $template = DocumentTemplate::factory()->create([
             'document_type' => 'rental_agreement_contract',
             'status' => DocumentTemplate::STATUS_ACTIVE,
-            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ rental_agreement.rent_cold }}</p><p>{{ bank_account.iban }}</p>',
+            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ property.area_living }}</p><p>{{ property.rooms }}</p><p>{{ property.floor }}</p><p>{{ rental_agreement.rent_cold }}</p><p>{{ bank_account.iban }}</p>',
         ]);
         $document = Document::factory()->create([
             'documentable_type' => RentalAgreement::class,
@@ -567,8 +572,11 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.latest_version.data_snapshot.tenant.name', 'Max Mieter')
             ->assertJsonPath('data.latest_version.data_snapshot.bank_account.account_holder', 'Erika Vermieter')
             ->assertJsonPath('data.latest_version.data_snapshot.bank_account.iban', 'DE89370400440532013000')
+            ->assertJsonPath('data.latest_version.data_snapshot.property.area_living', '82.50')
+            ->assertJsonPath('data.latest_version.data_snapshot.property.rooms', fn (mixed $value): bool => (string) $value === '3')
+            ->assertJsonPath('data.latest_version.data_snapshot.property.floor', fn (mixed $value): bool => (string) $value === '2')
             ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.rent_cold', '900.00')
-            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>900.00</p><p>DE89370400440532013000</p>')
+            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>82.50</p><p>3</p><p>2</p><p>900.00</p><p>DE89370400440532013000</p>')
             ->assertJsonCount(1, 'data.latest_version.files');
 
         $filePath = $response->json('data.latest_version.files.0.path');

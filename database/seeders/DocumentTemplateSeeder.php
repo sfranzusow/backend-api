@@ -28,6 +28,9 @@ class DocumentTemplateSeeder extends Seeder
 <p>Mieter: {{ tenant.name }}</p>
 <p>Objekt: {{ property.address }}</p>
 <p>Einheit: {{ property.unit_number }}</p>
+<p>Wohnfläche: {{ property.area_living }} m²</p>
+<p>Zimmer: {{ property.rooms }}</p>
+<p>Etage: {{ property.floor }}</p>
 <p>Beginn: {{ rental_agreement.date_from }}</p>
 <p>Ende: {{ rental_agreement.date_to }}</p>
 <p>Kaltmiete: {{ rental_agreement.rent_cold }} {{ rental_agreement.currency }}</p>
@@ -47,6 +50,9 @@ HTML,
                     'tenant.name',
                     'property.address',
                     'property.unit_number',
+                    'property.area_living',
+                    'property.rooms',
+                    'property.floor',
                     'rental_agreement.date_from',
                     'rental_agreement.date_to',
                     'rental_agreement.rent_cold',

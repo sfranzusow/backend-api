@@ -40,6 +40,9 @@ class RentalAgreementDocumentSnapshotFactory
                 'id' => $property?->id,
                 'unit_number' => $property?->unit_number,
                 'type' => $property?->type,
+                'area_living' => $property?->area_living,
+                'rooms' => $property?->rooms,
+                'floor' => $property?->floor,
                 'address' => $this->formatAddress($address),
                 'address_details' => [
                     'street' => $address?->street,
