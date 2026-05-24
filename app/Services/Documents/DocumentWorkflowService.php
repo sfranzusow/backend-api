@@ -18,7 +18,7 @@ use RuntimeException;
 class DocumentWorkflowService
 {
     public function __construct(
-        private BasicPdfRenderer $pdfRenderer,
+        private DompdfDocumentRenderer $pdfRenderer,
         private RentalAgreementDocumentSnapshotFactory $snapshotFactory,
         private DocumentTemplateRenderer $templateRenderer,
     ) {}
@@ -76,7 +76,7 @@ class DocumentWorkflowService
                 'template_snapshot' => $this->templateSnapshot($template),
                 'data_snapshot' => $dataSnapshot,
                 'metadata' => [
-                    'renderer' => 'basic_pdf',
+                    'renderer' => 'dompdf',
                 ],
                 'generated_by_id' => $user?->id,
                 'generated_at' => $generatedAt,
@@ -99,7 +99,7 @@ class DocumentWorkflowService
                 'size' => strlen($pdfContents),
                 'checksum' => hash('sha256', $pdfContents),
                 'metadata' => [
-                    'renderer' => 'basic_pdf',
+                    'renderer' => 'dompdf',
                 ],
                 'uploaded_by_id' => $user?->id,
                 'uploaded_at' => $generatedAt,

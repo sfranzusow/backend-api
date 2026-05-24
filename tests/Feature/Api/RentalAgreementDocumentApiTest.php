@@ -562,6 +562,7 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.latest_version.status', DocumentVersion::STATUS_GENERATED)
             ->assertJsonPath('data.latest_version.version_number', 1)
             ->assertJsonPath('data.latest_version.generated_by_id', $user->id)
+            ->assertJsonPath('data.latest_version.metadata.renderer', 'dompdf')
             ->assertJsonPath('data.latest_version.data_snapshot.landlord.name', 'Erika Vermieter')
             ->assertJsonPath('data.latest_version.data_snapshot.tenant.name', 'Max Mieter')
             ->assertJsonPath('data.latest_version.data_snapshot.bank_account.account_holder', 'Erika Vermieter')
@@ -573,7 +574,7 @@ class RentalAgreementDocumentApiTest extends TestCase
         $filePath = $response->json('data.latest_version.files.0.path');
 
         Storage::disk($this->documentsDisk())->assertExists($filePath);
-        $this->assertStringStartsWith('%PDF-1.4', Storage::disk($this->documentsDisk())->get($filePath));
+        $this->assertStringStartsWith('%PDF-', Storage::disk($this->documentsDisk())->get($filePath));
 
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
@@ -592,12 +593,61 @@ class RentalAgreementDocumentApiTest extends TestCase
             'mime_type' => 'application/pdf',
         ]);
 
+        $latestVersion = DocumentVersion::query()
+            ->where('document_id', $document->id)
+            ->where('version_number', 1)
+            ->with('files')
+            ->firstOrFail();
+
+        $this->assertSame('dompdf', $latestVersion->metadata['renderer']);
+        $this->assertSame('dompdf', $latestVersion->files->firstOrFail()->metadata['renderer']);
+
         $download = $this->actingAs($user, 'sanctum')
             ->get('/api/documents/'.$document->id.'/download')
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
 
-        $this->assertStringStartsWith('%PDF-1.4', $download->streamedContent());
+        $this->assertStringStartsWith('%PDF-', $download->streamedContent());
+    }
+
+    public function test_landlord_can_generate_multi_page_pdf_from_plain_text_template(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+            'content' => collect(range(1, 140))
+                ->map(fn (int $line): string => 'Abschnitt '.$line.' fuer {{ tenant.name }}')
+                ->implode("\n"),
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+            'created_by_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertCreated()
+            ->assertJsonPath('data.latest_version.metadata.renderer', 'dompdf');
+
+        $pdfContents = Storage::disk($this->documentsDisk())->get(
+            $response->json('data.latest_version.files.0.path')
+        );
+
+        $this->assertStringStartsWith('%PDF-', $pdfContents);
+        $this->assertGreaterThan(1, preg_match_all('/\/Type\s*\/Page\b/', $pdfContents));
     }
 
     public function test_tenant_cannot_generate_document_for_own_rental_agreement(): void
