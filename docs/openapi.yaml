@@ -1407,6 +1407,54 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /document-template-placeholders:
+    get:
+      tags: [Documents]
+      summary: Platzhalter fuer Dokumentvorlagen listen
+      description: |
+        Liefert die fachlich erlaubten Platzhalter fuer einen Dokumenttyp.
+
+        Das Frontend soll diesen Endpunkt fuer Template-Editoren,
+        Autocomplete und Einfuege-Menues verwenden. Die Antwort enthaelt nicht
+        nur technische Pfade, sondern auch Labels, Gruppen, einfache Typen und
+        Beispiel-Tokens im Format `{{ rental_agreement.notes }}`.
+
+        Aktuell ist `rental_agreement_contract` implementiert. `admin` und
+        `landlord` duerfen die Liste abrufen; `tenant` und `user` haben keinen
+        Zugriff.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: document_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [rental_agreement_contract]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentTemplatePlaceholder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
   /document-templates:
     get:
       tags: [Documents]
@@ -3277,6 +3325,34 @@ components:
         meta:
           type: object
           additionalProperties: true
+
+    DocumentTemplatePlaceholder:
+      type: object
+      description: |
+        Erlaubter Template-Platzhalter fuer einen Dokumenttyp. Diese Liste ist
+        die Backend-Quelle fuer Frontend-Autocomplete und serverseitige
+        Template-Validierung.
+      required: [path, label, group, type, nullable, example]
+      properties:
+        path:
+          type: string
+          example: rental_agreement.notes
+        label:
+          type: string
+          example: Individuelle Vereinbarungen
+        group:
+          type: string
+          example: Mietvertrag
+        type:
+          type: string
+          enum: [string, integer, decimal, date]
+          example: string
+        nullable:
+          type: boolean
+          example: true
+        example:
+          type: string
+          example: '{{ rental_agreement.notes }}'
 
     DocumentFile:
       type: object

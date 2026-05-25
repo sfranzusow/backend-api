@@ -207,6 +207,7 @@ Dokumentdateien koennen als PDF, Scan oder Foto hochgeladen und wieder
 heruntergeladen werden.
 
 - `GET /document-templates`: Dokumentvorlagen listen
+- `GET /document-template-placeholders?document_type=rental_agreement_contract`: erlaubte Platzhalter mit Frontend-Metadaten fuer einen Dokumenttyp listen
 - `POST /document-templates`: Dokumentvorlage anlegen
 - `GET /document-templates/{documentTemplate}`: einzelne Dokumentvorlage anzeigen
 - `PUT/PATCH /document-templates/{documentTemplate}`: Dokumentvorlage aktualisieren
@@ -232,6 +233,7 @@ Bei Vorlagen gilt:
 - `landlord` darf aktive Vorlagen sehen und fuer die Dokumentanlage auswaehlen
 - `tenant` und `user` haben keinen Zugriff auf die Vorlagenverwaltung
 - `content` nutzt Platzhalter im Format `{{ tenant.name }}`
+- `GET /document-template-placeholders?document_type=...` liefert die erlaubten Platzhalter als Backend-Quelle fuer Template-Editoren, Autocomplete und Einfuege-Menues
 - wenn `placeholders` nicht uebergeben wird, extrahiert der Server die Platzhalter aus `content`
 - unbekannte Platzhalter werden abgelehnt; fuer Mietvertragsvorlagen sind aktuell nur Pfade aus dem Mietvertrag-Snapshot erlaubt, z. B. `document.title`, `tenant.name`, `landlord.name`, `property.address`, `rental_agreement.rent_cold`
 - Bankkonto-Platzhalter wie `bank_account.account_holder`, `bank_account.iban`, `bank_account.bic` und `bank_account.bank_name` sind fuer Mietvertragsvorlagen erlaubt

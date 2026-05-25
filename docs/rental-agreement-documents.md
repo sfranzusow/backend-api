@@ -229,6 +229,13 @@ Beispiele fuer Platzhalter:
 - `{{ bank_account.account_holder }}`
 - `{{ bank_account.iban }}`
 
+Das Frontend kann die erlaubten Platzhalter pro Dokumenttyp ueber
+`GET /document-template-placeholders?document_type=rental_agreement_contract`
+abrufen. Die Antwort liefert neben dem technischen Pfad auch Label, Gruppe,
+Typ, Nullable-Information und ein einfuegbares Beispiel wie
+`{{ rental_agreement.notes }}`. Damit bleibt das Backend die Quelle der
+Wahrheit fuer Template-Editor, Autocomplete und serverseitige Validierung.
+
 Das Frontend sollte Vorlagen spaeter nicht als beliebige Datei behandeln,
 sondern als editierbares Vertragsmodell mit Abschnitten. Fuer den Start reicht
 aber eine einfache Text- oder HTML-basierte Bearbeitung, solange Platzhalter
@@ -372,6 +379,8 @@ PDF- und Upload-Endpunkte fuer den einfachen Dokumentworkflow sind bereits
 implementiert.
 
 - `GET /document-templates`: Vorlagenliste
+- `GET /document-template-placeholders?document_type=rental_agreement_contract`:
+  implementiert fuer Platzhalter-Metadaten je Dokumenttyp
 - `GET /document-templates/{template}`: Vorlage anzeigen
 - `POST /document-templates`: implementiert fuer Admin-Vorlagenanlage
 - `PUT/PATCH /document-templates/{template}`: implementiert fuer Admin-Vorlagenbearbeitung
