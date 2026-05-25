@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\DocumentReminderController;
 use App\Http\Controllers\Api\DocumentTemplateController;
+use App\Http\Controllers\Api\DocumentTemplatePlaceholderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyMemberController;
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('properties', PropertyController::class);
     Route::put('/properties/{property}/members', [PropertyMemberController::class, 'sync']);
     Route::apiResource('rental-agreements', RentalAgreementController::class);
+    Route::get('/document-template-placeholders', DocumentTemplatePlaceholderController::class);
     Route::apiResource('document-templates', DocumentTemplateController::class);
     Route::post('/document-templates/{document_template}/activate', [DocumentTemplateController::class, 'activate']);
     Route::get('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'index']);

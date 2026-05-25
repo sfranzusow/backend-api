@@ -27,6 +27,8 @@ class DocumentTemplateApiTest extends TestCase
         ]);
 
         $this->getJson('/api/document-templates')->assertUnauthorized();
+        $this->getJson('/api/document-template-placeholders?document_type='.DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT)
+            ->assertUnauthorized();
         $this->postJson('/api/document-templates', [])->assertUnauthorized();
         $this->getJson('/api/document-templates/'.$template->id)->assertUnauthorized();
         $this->patchJson('/api/document-templates/'.$template->id, [])->assertUnauthorized();
@@ -61,6 +63,51 @@ class DocumentTemplateApiTest extends TestCase
         $this->actingAs($landlord, 'sanctum')
             ->getJson('/api/document-templates/'.$draftTemplate->id)
             ->assertForbidden();
+    }
+
+    public function test_landlord_can_list_placeholder_metadata_for_document_type(): void
+    {
+        $landlord = $this->userWithRole(RoleName::Landlord);
+
+        $response = $this->actingAs($landlord, 'sanctum')
+            ->getJson('/api/document-template-placeholders?document_type='.DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT)
+            ->assertOk()
+            ->assertJsonFragment([
+                'path' => 'rental_agreement.notes',
+                'label' => 'Individuelle Vereinbarungen',
+                'group' => 'Mietvertrag',
+                'type' => 'string',
+                'nullable' => true,
+                'example' => '{{ rental_agreement.notes }}',
+            ])
+            ->assertJsonFragment([
+                'path' => 'tenant.name',
+                'label' => 'Name des Mieters',
+                'group' => 'Mieter',
+                'type' => 'string',
+                'nullable' => false,
+                'example' => '{{ tenant.name }}',
+            ]);
+
+        $this->assertCount(
+            count(DocumentTemplate::allowedPlaceholdersFor(DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT)),
+            $response->json('data')
+        );
+    }
+
+    public function test_placeholder_metadata_requires_known_document_type(): void
+    {
+        $landlord = $this->userWithRole(RoleName::Landlord);
+
+        $this->actingAs($landlord, 'sanctum')
+            ->getJson('/api/document-template-placeholders')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('document_type');
+
+        $this->actingAs($landlord, 'sanctum')
+            ->getJson('/api/document-template-placeholders?document_type=unknown_type')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('document_type');
     }
 
     public function test_admin_can_create_draft_template_and_extract_placeholders_from_content(): void
@@ -233,6 +280,10 @@ class DocumentTemplateApiTest extends TestCase
 
         $this->actingAs($tenant, 'sanctum')
             ->getJson('/api/document-templates')
+            ->assertForbidden();
+
+        $this->actingAs($tenant, 'sanctum')
+            ->getJson('/api/document-template-placeholders?document_type='.DocumentTemplate::TYPE_RENTAL_AGREEMENT_CONTRACT)
             ->assertForbidden();
 
         $this->actingAs($landlord, 'sanctum')
