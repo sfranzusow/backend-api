@@ -6,9 +6,11 @@ use App\Enums\RoleName;
 use App\Models\BankAccount;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\DocumentLayoutTemplate;
 use App\Models\DocumentReminder;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
+use App\Models\Organization;
 use App\Models\Property;
 use App\Models\RentalAgreement;
 use App\Models\User;
@@ -743,6 +745,74 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.template.name', 'Wohnraummietvertrag Standard')
             ->assertJsonPath('data.latest_version.template_snapshot.name', 'Wohnraummietvertrag Standard')
             ->assertJsonCount(1, 'data.latest_version.files');
+
+        Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
+    }
+
+    public function test_pdf_generation_snapshots_active_organization_document_layout(): void
+    {
+        Storage::fake($this->documentsDisk());
+
+        $organization = Organization::factory()->create([
+            'name' => 'Muster Hausverwaltung',
+        ]);
+        $user = User::factory()->create([
+            'name' => 'Erika Vermieter',
+            'organization_id' => $organization->id,
+        ]);
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $template = DocumentTemplate::factory()->create([
+            'document_type' => 'rental_agreement_contract',
+            'locale' => 'de-DE',
+            'status' => DocumentTemplate::STATUS_ACTIVE,
+            'content' => '<h1>{{ document.title }}</h1>',
+        ]);
+        $layout = DocumentLayoutTemplate::factory()->active()->create([
+            'owner_type' => Organization::class,
+            'owner_id' => $organization->id,
+            'document_type' => 'rental_agreement_contract',
+            'locale' => 'de-DE',
+            'version' => 1,
+            'name' => 'Mietvertrags-Briefkopf',
+            'header_enabled' => true,
+            'footer_enabled' => true,
+            'page_numbers_enabled' => true,
+            'header_content' => '<p>{{ organization.name }} · Version {{ document.version_number }}</p>',
+            'footer_content' => '<p>{{ landlord.name }} · {{ document.generated_at }}</p>',
+            'placeholders' => [
+                'document.generated_at',
+                'document.version_number',
+                'landlord.name',
+                'organization.name',
+            ],
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_template_id' => $template->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_DRAFT,
+            'title' => 'Wohnraummietvertrag',
+            'created_by_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/documents/'.$document->id.'/generate')
+            ->assertCreated()
+            ->assertJsonPath('data.latest_version.document_layout_template_id', $layout->id)
+            ->assertJsonPath('data.latest_version.layout_snapshot.name', 'Mietvertrags-Briefkopf')
+            ->assertJsonPath('data.latest_version.layout_snapshot.owner_type', DocumentLayoutTemplate::OWNER_TYPE_ORGANIZATION)
+            ->assertJsonPath('data.latest_version.layout_snapshot.header_enabled', true)
+            ->assertJsonPath('data.latest_version.layout_snapshot.footer_enabled', true)
+            ->assertJsonPath('data.latest_version.data_snapshot.organization.name', 'Muster Hausverwaltung')
+            ->assertJsonPath('data.latest_version.data_snapshot.document.version_number', 1)
+            ->assertJsonPath('data.latest_version.data_snapshot.document.generated_at', fn (mixed $value): bool => is_string($value) && $value !== '')
+            ->assertJsonPath('data.latest_version.files.0.metadata.document_layout_template_id', $layout->id);
 
         Storage::disk($this->documentsDisk())->assertExists($response->json('data.latest_version.files.0.path'));
     }

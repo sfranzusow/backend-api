@@ -5,24 +5,34 @@ namespace App\Services\Documents;
 use App\Models\Address;
 use App\Models\Document;
 use App\Models\DocumentTemplate;
+use App\Models\Organization;
 use App\Models\RentalAgreement;
 use App\Models\User;
+use DateTimeInterface;
 
 class RentalAgreementDocumentSnapshotFactory
 {
     /**
      * @return array<string, mixed>
      */
-    public function make(Document $document, DocumentTemplate $template, RentalAgreement $rentalAgreement): array
-    {
+    public function make(
+        Document $document,
+        DocumentTemplate $template,
+        RentalAgreement $rentalAgreement,
+        ?int $versionNumber = null,
+        ?DateTimeInterface $generatedAt = null
+    ): array {
         $property = $rentalAgreement->property;
         $address = $property?->address;
+        $landlord = $rentalAgreement->landlord;
 
         return [
             'document' => [
                 'id' => $document->id,
                 'title' => $document->title ?? $template->name,
                 'document_type' => $document->document_type,
+                'version_number' => $versionNumber,
+                'generated_at' => $generatedAt?->format(DATE_ATOM),
             ],
             'rental_agreement' => [
                 'id' => $rentalAgreement->id,
@@ -52,8 +62,9 @@ class RentalAgreementDocumentSnapshotFactory
                     'country' => $address?->country,
                 ],
             ],
-            'landlord' => $this->userSnapshot($rentalAgreement->landlord),
+            'landlord' => $this->userSnapshot($landlord),
             'tenant' => $this->userSnapshot($rentalAgreement->tenant),
+            'organization' => $this->organizationSnapshot($landlord?->organization),
             'bank_account' => [
                 'id' => $rentalAgreement->bankAccount?->id,
                 'account_holder' => $rentalAgreement->bankAccount?->account_holder,
@@ -79,6 +90,21 @@ class RentalAgreementDocumentSnapshotFactory
             'address_zip_code' => $user?->address_zip_code,
             'address_city' => $user?->address_city,
             'address_country' => $user?->address_country,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function organizationSnapshot(?Organization $organization): array
+    {
+        return [
+            'id' => $organization?->id,
+            'name' => $organization?->name,
+            'type' => $organization?->type,
+            'email' => $organization?->email,
+            'phone_number' => $organization?->phone_number,
+            'website' => $organization?->website,
         ];
     }
 

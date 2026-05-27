@@ -7,9 +7,11 @@ class DocumentTemplateRenderer
     /**
      * @param  array<string, mixed>  $data
      */
-    public function render(?string $content, array $data): string
+    public function render(?string $content, array $data, ?string $defaultContent = '<h1>{{ document.title }}</h1>'): string
     {
-        $templateContent = $content ?: '<h1>{{ document.title }}</h1>';
+        $templateContent = $content !== null && $content !== ''
+            ? $content
+            : ($defaultContent ?? '');
 
         return preg_replace_callback(
             '/{{\s*([A-Za-z0-9_.]+)\s*}}/',

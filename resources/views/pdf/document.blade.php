@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <style>
         @page {
-            margin: 22mm 18mm 24mm;
+            margin: {{ $hasHeader ? '34mm' : '22mm' }} 18mm {{ $hasFooter ? '30mm' : '20mm' }};
         }
 
         * {
@@ -20,6 +20,49 @@
         }
 
         .document-content {
+            white-space: pre-wrap;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .document-layout-header,
+        .document-layout-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            color: #4b5563;
+            font-size: 8.5pt;
+            line-height: 1.25;
+        }
+
+        .document-layout-header {
+            top: -25mm;
+            min-height: 18mm;
+            padding-bottom: 4mm;
+            border-bottom: 0.4pt solid #d1d5db;
+        }
+
+        .document-layout-footer {
+            bottom: -20mm;
+            min-height: 14mm;
+            padding-top: 3mm;
+            border-top: 0.4pt solid #d1d5db;
+        }
+
+        .document-layout-banner {
+            display: block;
+            width: 100%;
+            max-height: 16mm;
+            object-fit: contain;
+            margin-bottom: 2mm;
+        }
+
+        .document-layout-footer .document-layout-banner {
+            max-height: 10mm;
+            margin: 0 0 1.5mm;
+        }
+
+        .document-layout-content {
             white-space: pre-wrap;
             word-break: normal;
             overflow-wrap: anywhere;
@@ -79,6 +122,30 @@
     </style>
 </head>
 <body>
+    @if ($hasHeader)
+        <header class="document-layout-header">
+            @if ($headerBannerPath)
+                <img class="document-layout-banner" src="{{ $headerBannerPath }}" alt="">
+            @endif
+
+            @if ($headerContent)
+                <div class="document-layout-content">{!! $headerContent !!}</div>
+            @endif
+        </header>
+    @endif
+
+    @if ($hasFooter)
+        <footer class="document-layout-footer">
+            @if ($footerBannerPath)
+                <img class="document-layout-banner" src="{{ $footerBannerPath }}" alt="">
+            @endif
+
+            @if ($footerContent)
+                <div class="document-layout-content">{!! $footerContent !!}</div>
+            @endif
+        </footer>
+    @endif
+
     <main class="document-content">{!! $content !!}</main>
 </body>
 </html>

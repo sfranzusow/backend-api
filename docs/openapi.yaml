@@ -1727,6 +1727,278 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /document-layout-templates:
+    get:
+      tags: [Documents]
+      summary: Dokumentlayouts listen
+      description: |
+        Listet optionale Header-/Footer-Layouts fuer die PDF-Erzeugung.
+
+        `admin` sieht alle Layouts. `landlord` sieht nur Layouts der eigenen
+        Organisation und eigene persoenliche Layouts. `tenant` und `user` haben
+        keinen Zugriff.
+
+        Das Frontend nutzt diese Liste fuer eine Layout-/Briefkopf-Verwaltung
+        pro Dokumentart.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: owner_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [organization, user]
+        - name: owner_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: document_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rental_agreement_contract]
+        - name: locale
+          in: query
+          required: false
+          schema:
+            type: string
+            example: de-DE
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentLayoutTemplatePaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [Documents]
+      summary: Dokumentlayout anlegen
+      description: |
+        Erstellt ein Header-/Footer-Layout fuer eine Organisation oder einen
+        einzelnen Vermieter.
+
+        `admin` darf beliebige Owner setzen. `landlord` darf nur die eigene
+        Organisation oder sich selbst als Owner verwenden. Wenn ein Vermieter
+        keine Owner-Felder sendet, setzt das Backend automatisch die eigene
+        Organisation oder, falls keine Organisation vorhanden ist, den
+        Vermieter selbst.
+
+        Wenn `status=active` uebergeben wird, wird das Layout nach dem Anlegen
+        aktiviert. Andere aktive Layouts desselben Owners fuer dieselbe
+        Kombination aus `document_type` und `locale` werden archiviert.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreDocumentLayoutTemplateRequest'
+      responses:
+        '201':
+          description: Layout angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentLayoutTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /document-layout-templates/{document_layout_template}:
+    parameters:
+      - name: document_layout_template
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Documents]
+      summary: Dokumentlayout anzeigen
+      description: |
+        Zeigt ein einzelnes Layout. `admin` sieht alle Layouts, `landlord` nur
+        Layouts der eigenen Organisation oder eigene persoenliche Layouts.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentLayoutTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Documents]
+      summary: Dokumentlayout ersetzen
+      description: Aktualisiert ein Dokumentlayout. Entspricht fachlich `PATCH`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentLayoutTemplateRequest'
+      responses:
+        '200':
+          description: Layout aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentLayoutTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [Documents]
+      summary: Dokumentlayout aktualisieren
+      description: |
+        Aktualisiert ein Dokumentlayout. Wenn `header_content` oder
+        `footer_content` geaendert und `placeholders` nicht explizit uebergeben
+        wird, extrahiert der Server die Platzhalter aus Header und Footer.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentLayoutTemplateRequest'
+      responses:
+        '200':
+          description: Layout aktualisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentLayoutTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Documents]
+      summary: Dokumentlayout loeschen
+      description: |
+        Loescht ein nicht aktives Layout. Aktive Layouts muessen vorher
+        archiviert werden.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Aktives Layout kann nicht direkt geloescht werden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /document-layout-templates/{document_layout_template}/activate:
+    parameters:
+      - name: document_layout_template
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Documents]
+      summary: Dokumentlayout aktivieren
+      description: |
+        Aktiviert ein Layout. Andere aktive Layouts desselben Owners fuer
+        dieselbe Kombination aus `document_type` und `locale` werden
+        automatisch archiviert.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: Layout aktiviert
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DocumentLayoutTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /documents/{document}:
     parameters:
       - name: document
@@ -3326,6 +3598,92 @@ components:
           type: object
           additionalProperties: true
 
+    DocumentLayoutTemplate:
+      type: object
+      description: |
+        Optionales Header-/Footer-Layout fuer die PDF-Erzeugung. Ein Layout
+        gehoert entweder zu einer Organisation oder zu einem einzelnen
+        Vermieter und wird beim Generieren als `layout_snapshot` eingefroren.
+      required: [id, owner_type, owner_id, name, document_type, locale, version, status, header_enabled, footer_enabled, page_numbers_enabled, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        owner_type:
+          type: string
+          enum: [organization, user]
+        owner_id:
+          type: integer
+        name:
+          type: string
+        document_type:
+          type: string
+          enum: [rental_agreement_contract]
+        locale:
+          type: string
+          example: de-DE
+        version:
+          type: integer
+        status:
+          type: string
+          enum: [draft, active, archived]
+        header_enabled:
+          type: boolean
+        footer_enabled:
+          type: boolean
+        page_numbers_enabled:
+          type: boolean
+          description: Wirkt nur, wenn `footer_enabled=true` ist.
+        header_content:
+          type: string
+          nullable: true
+          example: '<p>{{ organization.name }}</p>'
+        footer_content:
+          type: string
+          nullable: true
+          example: '<p>{{ document.title }} · {{ document.version_number }}</p>'
+        header_banner_path:
+          type: string
+          nullable: true
+          description: Optionaler relativer Public-Pfad fuer ein Header-Banner.
+        footer_banner_path:
+          type: string
+          nullable: true
+          description: Optionaler relativer Public-Pfad fuer ein Footer-Banner.
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_by_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentLayoutTemplatePaginator:
+      type: object
+      description: Laravel paginierte Resource-Collection (data + links + meta)
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentLayoutTemplate'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
     DocumentTemplatePlaceholder:
       type: object
       description: |
@@ -3345,7 +3703,7 @@ components:
           example: Mietvertrag
         type:
           type: string
-          enum: [string, integer, decimal, date]
+          enum: [string, integer, decimal, date, datetime]
           example: string
         nullable:
           type: boolean
@@ -3417,6 +3775,10 @@ components:
           type: integer
           nullable: true
           description: Für reine `tenant`-Sichten nicht enthalten.
+        document_layout_template_id:
+          type: integer
+          nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
         version_number:
           type: integer
         status:
@@ -3430,6 +3792,11 @@ components:
           nullable: true
           description: Für reine `tenant`-Sichten nicht enthalten.
         template_snapshot:
+          type: object
+          nullable: true
+          description: Für reine `tenant`-Sichten nicht enthalten.
+          additionalProperties: true
+        layout_snapshot:
           type: object
           nullable: true
           description: Für reine `tenant`-Sichten nicht enthalten.
@@ -3692,6 +4059,141 @@ components:
         content:
           type: string
           nullable: true
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    StoreDocumentLayoutTemplateRequest:
+      type: object
+      description: |
+        Erstellt ein optionales Header-/Footer-Layout. Header und Footer
+        nutzen Platzhalter im Format `{{ organization.name }}`. Wenn
+        `placeholders` fehlt, extrahiert der Server die Platzhalter aus
+        `header_content` und `footer_content`.
+
+        Fuer Vermieter sind `owner_type` und `owner_id` optional. Ohne diese
+        Felder setzt das Backend automatisch die eigene Organisation oder, wenn
+        keine Organisation vorhanden ist, den Vermieter selbst.
+      required: [name, document_type]
+      properties:
+        owner_type:
+          type: string
+          enum: [organization, user]
+          description: Fuer Admins erforderlich; fuer Vermieter optional.
+        owner_id:
+          type: integer
+          description: Fuer Admins erforderlich; fuer Vermieter optional.
+        name:
+          type: string
+          maxLength: 255
+          example: Mietvertrags-Briefkopf
+        document_type:
+          type: string
+          enum: [rental_agreement_contract]
+        locale:
+          type: string
+          maxLength: 10
+          default: de-DE
+        version:
+          type: integer
+          minimum: 1
+          default: 1
+        status:
+          type: string
+          enum: [draft, active, archived]
+          default: draft
+          description: Bei `active` wird das Layout nach dem Anlegen aktiviert.
+        header_enabled:
+          type: boolean
+          default: false
+        footer_enabled:
+          type: boolean
+          default: false
+        page_numbers_enabled:
+          type: boolean
+          default: true
+          description: Wirkt nur, wenn `footer_enabled=true` ist.
+        header_content:
+          type: string
+          nullable: true
+          example: '<p>{{ organization.name }}</p>'
+        footer_content:
+          type: string
+          nullable: true
+          example: '<p>{{ document.title }} · {{ document.version_number }}</p>'
+        header_banner_path:
+          type: string
+          nullable: true
+          maxLength: 2048
+        footer_banner_path:
+          type: string
+          nullable: true
+          maxLength: 2048
+        placeholders:
+          type: array
+          nullable: true
+          items:
+            type: string
+          example: [organization.name, document.title, document.version_number]
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    UpdateDocumentLayoutTemplateRequest:
+      type: object
+      description: |
+        Aktualisiert ein Dokumentlayout. Alle Felder sind optional.
+        Unbekannte Platzhalter werden abgelehnt. Die Kombination aus Owner,
+        `document_type`, `locale` und `version` muss eindeutig bleiben.
+      properties:
+        owner_type:
+          type: string
+          enum: [organization, user]
+        owner_id:
+          type: integer
+        name:
+          type: string
+          maxLength: 255
+        document_type:
+          type: string
+          enum: [rental_agreement_contract]
+        locale:
+          type: string
+          maxLength: 10
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [draft, active, archived]
+          description: Bei `active` wird das Layout aktiviert und Konkurrenzlayouts werden archiviert.
+        header_enabled:
+          type: boolean
+        footer_enabled:
+          type: boolean
+        page_numbers_enabled:
+          type: boolean
+        header_content:
+          type: string
+          nullable: true
+        footer_content:
+          type: string
+          nullable: true
+        header_banner_path:
+          type: string
+          nullable: true
+          maxLength: 2048
+        footer_banner_path:
+          type: string
+          nullable: true
+          maxLength: 2048
         placeholders:
           type: array
           nullable: true

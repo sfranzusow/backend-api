@@ -4,6 +4,7 @@ namespace App\Services\Documents;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\DocumentLayoutTemplate;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\RentalAgreement;
@@ -21,6 +22,7 @@ class DocumentWorkflowService
         private DompdfDocumentRenderer $pdfRenderer,
         private RentalAgreementDocumentSnapshotFactory $snapshotFactory,
         private DocumentTemplateRenderer $templateRenderer,
+        private DocumentLayoutTemplateResolver $layoutResolver,
     ) {}
 
     public function generate(Document $document, ?User $user): Document
@@ -42,7 +44,7 @@ class DocumentWorkflowService
                 ]);
             }
 
-            $rentalAgreement->loadMissing(['property.address', 'landlord', 'tenant', 'bankAccount']);
+            $rentalAgreement->loadMissing(['property.address', 'landlord.organization', 'tenant', 'bankAccount']);
             $template = $this->activeTemplateFor($document);
 
             if (! $template instanceof DocumentTemplate) {
@@ -52,10 +54,12 @@ class DocumentWorkflowService
             }
 
             $generatedAt = now();
-            $dataSnapshot = $this->snapshotFactory->make($document, $template, $rentalAgreement);
-            $contentSnapshot = $this->templateRenderer->render($template->content, $dataSnapshot);
             $previousVersion = $document->latestVersion()->lockForUpdate()->first();
             $versionNumber = ((int) $document->versions()->lockForUpdate()->max('version_number')) + 1;
+            $dataSnapshot = $this->snapshotFactory->make($document, $template, $rentalAgreement, $versionNumber, $generatedAt);
+            $contentSnapshot = $this->templateRenderer->render($template->content, $dataSnapshot);
+            $layout = $this->layoutResolver->activeFor($document, $template, $rentalAgreement);
+            $renderedLayout = $this->renderedLayout($layout, $dataSnapshot);
 
             if (
                 $previousVersion instanceof DocumentVersion
@@ -69,11 +73,13 @@ class DocumentWorkflowService
 
             $version = $document->versions()->create([
                 'document_template_id' => $template->id,
+                'document_layout_template_id' => $layout?->id,
                 'version_number' => $versionNumber,
                 'status' => DocumentVersion::STATUS_GENERATED,
                 'title' => $document->title ?? $template->name,
                 'content_snapshot' => $contentSnapshot,
                 'template_snapshot' => $this->templateSnapshot($template),
+                'layout_snapshot' => $this->layoutSnapshot($layout),
                 'data_snapshot' => $dataSnapshot,
                 'metadata' => [
                     'renderer' => 'dompdf',
@@ -82,7 +88,7 @@ class DocumentWorkflowService
                 'generated_at' => $generatedAt,
             ]);
 
-            $pdfContents = $this->pdfRenderer->render($contentSnapshot);
+            $pdfContents = $this->pdfRenderer->render($contentSnapshot, $renderedLayout);
             $path = 'documents/'.$document->id.'/versions/'.$version->version_number.'/generated.pdf';
             $disk = $this->documentsDisk();
 
@@ -100,6 +106,7 @@ class DocumentWorkflowService
                 'checksum' => hash('sha256', $pdfContents),
                 'metadata' => [
                     'renderer' => 'dompdf',
+                    'document_layout_template_id' => $layout?->id,
                 ],
                 'uploaded_by_id' => $user?->id,
                 'uploaded_at' => $generatedAt,
@@ -324,6 +331,65 @@ class DocumentWorkflowService
             'version' => $template->version,
             'placeholders' => $template->placeholders,
             'metadata' => $template->metadata,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dataSnapshot
+     * @return array{header: array{enabled: bool, content: ?string, banner_path: ?string}, footer: array{enabled: bool, content: ?string, banner_path: ?string, page_numbers_enabled: bool}}|null
+     */
+    private function renderedLayout(?DocumentLayoutTemplate $layout, array $dataSnapshot): ?array
+    {
+        if (! $layout instanceof DocumentLayoutTemplate) {
+            return null;
+        }
+
+        return [
+            'header' => [
+                'enabled' => $layout->header_enabled,
+                'content' => $layout->header_enabled
+                    ? $this->templateRenderer->render($layout->header_content, $dataSnapshot, '')
+                    : null,
+                'banner_path' => $layout->header_enabled ? $layout->header_banner_path : null,
+            ],
+            'footer' => [
+                'enabled' => $layout->footer_enabled,
+                'content' => $layout->footer_enabled
+                    ? $this->templateRenderer->render($layout->footer_content, $dataSnapshot, '')
+                    : null,
+                'banner_path' => $layout->footer_enabled ? $layout->footer_banner_path : null,
+                'page_numbers_enabled' => $layout->footer_enabled && $layout->page_numbers_enabled,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function layoutSnapshot(?DocumentLayoutTemplate $layout): ?array
+    {
+        if (! $layout instanceof DocumentLayoutTemplate) {
+            return null;
+        }
+
+        return [
+            'id' => $layout->id,
+            'owner_type' => DocumentLayoutTemplate::ownerTypeLabel($layout->owner_type),
+            'owner_id' => $layout->owner_id,
+            'name' => $layout->name,
+            'document_type' => $layout->document_type,
+            'locale' => $layout->locale,
+            'version' => $layout->version,
+            'status' => $layout->status,
+            'header_enabled' => $layout->header_enabled,
+            'footer_enabled' => $layout->footer_enabled,
+            'page_numbers_enabled' => $layout->page_numbers_enabled,
+            'header_content' => $layout->header_content,
+            'footer_content' => $layout->footer_content,
+            'header_banner_path' => $layout->header_banner_path,
+            'footer_banner_path' => $layout->footer_banner_path,
+            'placeholders' => $layout->placeholders,
+            'metadata' => $layout->metadata,
         ];
     }
 }

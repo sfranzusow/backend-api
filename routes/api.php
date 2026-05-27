@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\DocumentLayoutTemplateController;
 use App\Http\Controllers\Api\DocumentReminderController;
 use App\Http\Controllers\Api\DocumentTemplateController;
 use App\Http\Controllers\Api\DocumentTemplatePlaceholderController;
@@ -36,6 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/document-template-placeholders', DocumentTemplatePlaceholderController::class);
     Route::apiResource('document-templates', DocumentTemplateController::class);
     Route::post('/document-templates/{document_template}/activate', [DocumentTemplateController::class, 'activate']);
+    Route::apiResource('document-layout-templates', DocumentLayoutTemplateController::class);
+    Route::post('/document-layout-templates/{document_layout_template}/activate', [DocumentLayoutTemplateController::class, 'activate']);
     Route::get('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'index']);
     Route::post('/rental-agreements/{rental_agreement}/documents', [RentalAgreementDocumentController::class, 'store']);
     Route::get('/rental-agreements/{rental_agreement}/payments', [PaymentController::class, 'index']);

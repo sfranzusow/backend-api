@@ -34,11 +34,13 @@ class DocumentVersion extends Model
     protected $fillable = [
         'document_id',
         'document_template_id',
+        'document_layout_template_id',
         'version_number',
         'status',
         'title',
         'content_snapshot',
         'template_snapshot',
+        'layout_snapshot',
         'data_snapshot',
         'metadata',
         'generated_by_id',
@@ -50,6 +52,7 @@ class DocumentVersion extends Model
         return [
             'version_number' => 'integer',
             'template_snapshot' => 'array',
+            'layout_snapshot' => 'array',
             'data_snapshot' => 'array',
             'metadata' => 'array',
             'generated_at' => 'datetime',
@@ -83,6 +86,11 @@ class DocumentVersion extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class, 'document_template_id');
+    }
+
+    public function layoutTemplate(): BelongsTo
+    {
+        return $this->belongsTo(DocumentLayoutTemplate::class, 'document_layout_template_id');
     }
 
     public function files(): HasMany

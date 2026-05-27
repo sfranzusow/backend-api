@@ -50,6 +50,8 @@ Vermieter, Mieter, Laufzeit, Miete, Nebenkosten, Kaution und Status.
 Zusatzlich soll es generische Dokument-Konzepte geben:
 
 - `DocumentTemplate`: editierbare Vorlage fuer Dokumente
+- `DocumentLayoutTemplate`: optionaler Header/Footer/Briefkopf pro Owner und
+  Dokumenttyp
 - `Document`: konkrete Dokumentakte zu einem fachlichen Objekt
 - `DocumentVersion`: konkrete erzeugte Version, z. B. ein PDF-Snapshot
 - `DocumentFile`: gespeicherte Datei, z. B. Original-PDF oder unterschriebener Upload
@@ -84,8 +86,11 @@ Angelegt sind:
 - `documents`: generische Dokumentakte mit polymorphem `documentable`,
   optionaler Vorlage, `document_type`, Dokumentstatus, Titel und Metadaten
 - `document_versions`: versionierte Snapshots mit `version_number`, Status,
-  Inhaltssnapshot, Template-Snapshot, Datensnapshot, Metadaten,
-  `generated_by_id` und `generated_at`
+  Inhaltssnapshot, Template-Snapshot, optionalem Layout-Snapshot,
+  Datensnapshot, Metadaten, `generated_by_id` und `generated_at`
+- `document_layout_templates`: optionale Header-/Footer-Layouts fuer
+  Organisationen oder einzelne Vermieter, mit Inhalt, Banner-Pfaden,
+  Seitenzahlsteuerung, Status, Version und Platzhaltern
 - `document_files`: Storage-Metadaten fuer Dateien einer Dokumentversion,
   z. B. erzeugtes PDF, unterschriebener Upload oder Anhang
 - `document_reminders`: Fristen/Wiedervorlagen mit `due_at`, optionalem
@@ -138,12 +143,13 @@ Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
   Mieter-Sichten nicht ausgeliefert.
 
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
-Mietvertragsdaten. Zusaetzlich wird eine einfache PDF-Datei als `DocumentFile`
-mit `file_type=generated_pdf` gespeichert. Beim Upload wird eine Datei als
-`file_type=signed_upload` an die neueste Dokumentversion gehaengt und der
-Status von `Document` und `DocumentVersion` auf `signed_uploaded` gesetzt.
-`void` ist final; verworfene Versionen werden nicht mehr per Download
-ausgeliefert.
+Mietvertragsdaten. Falls fuer den Vermieter ein aktives Layout existiert,
+wird dieses ebenfalls als `layout_snapshot` eingefroren. Zusaetzlich wird eine
+PDF-Datei als `DocumentFile` mit `file_type=generated_pdf` gespeichert. Beim
+Upload wird eine Datei als `file_type=signed_upload` an die neueste
+Dokumentversion gehaengt und der Status von `Document` und `DocumentVersion`
+auf `signed_uploaded` gesetzt. `void` ist final; verworfene Versionen werden
+nicht mehr per Download ausgeliefert.
 
 Reminder sind zunaechst sichtbare Workflow-Hilfen. Sie haben die Status
 `pending`, `done` und `cancelled`; eine automatische Benachrichtigung per Job
@@ -168,6 +174,8 @@ fachliche Objekt.
 Geplante Kernverantwortungen:
 
 - `DocumentTemplate`: Vorlagen und Template-Metadaten
+- `DocumentLayoutTemplate`: optionale Briefkopf-, Header- und Footer-Layouts
+  pro Organisation oder Vermieter
 - `Document`: Dokumentakte mit Bezug auf ein fachliches Objekt
 - `DocumentVersion`: erzeugte Version inklusive Snapshots
 - `DocumentFile`: konkrete Dateien im Storage
@@ -280,17 +288,28 @@ damit Templates spaeter professionell und wiederverwendbar bleiben.
 Wenn der Vermieter zu einer Firma oder Organisation gehoert, soll das Dokument
 optional mit Branding erzeugt werden.
 
-Geplante Branding-Daten:
+Umgesetzt ist dafuer `DocumentLayoutTemplate`. Ein Layout gehoert entweder zu
+einer Organisation (`owner_type=organization`) oder zu einem einzelnen
+Vermieter (`owner_type=user`) und gilt fuer einen `document_type`, z. B.
+`rental_agreement_contract`.
 
-- Firmenname
-- Firmenadresse
-- Logo
-- Kontaktangaben
-- optional Farben oder Briefkopf
+Aktuelle Layout-Daten:
 
-Das Branding sollte beim Erzeugen eines Dokuments ebenfalls als Snapshot
-gespeichert werden. Wenn die Organisation spaeter ein neues Logo hochlaedt,
-bleiben alte Vertrags-PDFs unveraendert.
+- `header_enabled` und `footer_enabled`
+- `header_content` und `footer_content` mit Platzhaltern wie
+  `{{ organization.name }}`, `{{ landlord.name }}` oder
+  `{{ document.version_number }}`
+- optionale `header_banner_path` und `footer_banner_path`
+- `page_numbers_enabled` fuer `Seite X von Y` im Footer
+- `status`, `version`, `locale`, `metadata` und automatisch extrahierte
+  `placeholders`
+
+Beim Generieren sucht das Backend zuerst ein aktives Organisationslayout des
+Vermieters und danach ein aktives persoenliches Layout. Wenn kein aktives
+Layout vorhanden ist oder Header/Footer deaktiviert sind, wird dieser Bereich
+nicht ins PDF gerendert. Das verwendete Layout wird als `layout_snapshot`
+gespeichert. Wenn die Organisation spaeter den Briefkopf aendert, bleiben alte
+Vertrags-PDFs unveraendert.
 
 ## Unterschrift im ersten Schritt
 
@@ -387,6 +406,13 @@ implementiert.
 - `POST /document-templates/{template}/activate`: implementiert fuer Aktivierung
   inklusive Archivierung konkurrierender aktiver Vorlagen
 - `DELETE /document-templates/{template}`: implementiert fuer nicht aktive Vorlagen
+- `GET /document-layout-templates`: implementiert fuer Layout-Verwaltung
+- `POST /document-layout-templates`: implementiert fuer Layout-Anlage
+- `GET /document-layout-templates/{layout}`: implementiert fuer einzelne Layouts
+- `PUT/PATCH /document-layout-templates/{layout}`: implementiert fuer Layout-Bearbeitung
+- `POST /document-layout-templates/{layout}/activate`: implementiert fuer Aktivierung
+  inklusive Archivierung konkurrierender aktiver Layouts
+- `DELETE /document-layout-templates/{layout}`: implementiert fuer nicht aktive Layouts
 - `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten
 - `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
@@ -421,13 +447,30 @@ sein:
 - Vertragstexte sollten editierbar sein, aber Platzhalter muessen fuer Benutzer
   klar erkennbar bleiben.
 - Eine Template-Verwaltung sollte zunaechst Admin-only sein.
+- Eine Layout-Verwaltung kann Admins und Vermietern angeboten werden:
+  Admins sehen alle Layouts, Vermieter nur Layouts der eigenen Organisation
+  oder eigene persoenliche Layouts.
+- Das Frontend sollte bei Layouts `owner_type` (`organization` oder `user`)
+  und `owner_id` speichern. Wenn ein Vermieter beim Anlegen keine Owner-Felder
+  sendet, setzt das Backend automatisch die eigene Organisation oder den
+  Vermieter selbst.
+- Header/Footer sind optional. Ohne aktives Layout oder bei deaktiviertem
+  Header/Footer wird kein Bereich gerendert; das Frontend muss also keinen
+  leeren Briefkopf simulieren.
+- Layouts verwenden dieselbe Placeholder-Liste wie Dokumentvorlagen. Fuer
+  Briefkopf/Fusszeile sind besonders `organization.*`, `landlord.*`,
+  `document.title`, `document.version_number` und `document.generated_at`
+  relevant.
 - Vermieter brauchen fuer die Dokumentanlage nur aktive Vorlagen.
 - Unbekannte Platzhalter werden serverseitig abgelehnt; das Frontend sollte
   Validierungsfehler direkt an der Vorlage anzeigen.
 - Beim Aktivieren einer Vorlage archiviert die API andere aktive Vorlagen
   derselben Kombination aus `document_type`, `template_type` und `locale`.
+- Beim Aktivieren eines Layouts archiviert die API andere aktive Layouts
+  desselben Owners fuer dieselbe Kombination aus `document_type` und `locale`.
 - Bereits erzeugte Dokumentversionen bleiben durch ihren `template_snapshot`
-  stabil, auch wenn Vorlagen spaeter geaendert oder archiviert werden.
+  und optionalen `layout_snapshot` stabil, auch wenn Vorlagen oder Layouts
+  spaeter geaendert oder archiviert werden.
 
 ## Nicht im ersten Schritt
 
@@ -453,10 +496,12 @@ Die ersten Backend-Schritte sind umgesetzt:
 10. Fristen/Erinnerungen an Dokumentakten modellieren und per API verwalten.
 11. Admin-API fuer Dokumentvorlagen anlegen, bearbeiten, aktivieren, archivieren
     und loeschen.
+12. Header-/Footer-Layouts fuer Organisationen und Vermieter modellieren,
+    verwalten und beim PDF-Snapshot optional rendern.
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Frontend-Admin-/Vermieter-Oberflaeche fuer Bankkonten und Vorlagenauswahl bauen.
+1. Frontend-Admin-/Vermieter-Oberflaeche fuer Bankkonten, Vorlagenauswahl und Layout-Verwaltung bauen.
 2. Weitere Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
 3. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
 4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.

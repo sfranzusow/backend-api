@@ -22,6 +22,7 @@ class DocumentVersionResource extends JsonResource
             'document_id' => $this->document_id,
             $this->mergeWhen(! $isTenantView, [
                 'document_template_id' => $this->document_template_id,
+                'document_layout_template_id' => $this->document_layout_template_id,
             ]),
             'version_number' => $this->version_number,
             'status' => $this->status,
@@ -29,6 +30,7 @@ class DocumentVersionResource extends JsonResource
             $this->mergeWhen(! $isTenantView, [
                 'content_snapshot' => $this->content_snapshot,
                 'template_snapshot' => $this->template_snapshot,
+                'layout_snapshot' => $this->layout_snapshot,
                 'data_snapshot' => $this->data_snapshot,
                 'metadata' => $this->metadata,
             ]),

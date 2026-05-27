@@ -213,6 +213,12 @@ heruntergeladen werden.
 - `PUT/PATCH /document-templates/{documentTemplate}`: Dokumentvorlage aktualisieren
 - `DELETE /document-templates/{documentTemplate}`: Dokumentvorlage loeschen
 - `POST /document-templates/{documentTemplate}/activate`: Dokumentvorlage aktivieren
+- `GET /document-layout-templates`: Header-/Footer-Layouts listen
+- `POST /document-layout-templates`: Header-/Footer-Layout anlegen
+- `GET /document-layout-templates/{documentLayoutTemplate}`: einzelnes Layout anzeigen
+- `PUT/PATCH /document-layout-templates/{documentLayoutTemplate}`: Layout aktualisieren
+- `DELETE /document-layout-templates/{documentLayoutTemplate}`: nicht aktive Layouts loeschen
+- `POST /document-layout-templates/{documentLayoutTemplate}/activate`: Layout aktivieren
 - `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
 - `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte am Mietvertrag anlegen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
@@ -242,6 +248,30 @@ Bei Vorlagen gilt:
 - aktive Vorlagen koennen nicht direkt geloescht werden; sie muessen vorher archiviert werden
 - erzeugte Dokumentversionen behalten ihren `template_snapshot`, auch wenn die Vorlage spaeter geaendert oder archiviert wird
 
+Bei Layouts gilt:
+
+- Layouts steuern optional Header, Footer, Banner-Pfade und Seitenzahlen pro
+  `document_type`
+- `owner_type` ist `organization` oder `user`; Vermieter ohne explizite
+  Owner-Angabe speichern Layouts automatisch fuer die eigene Organisation oder
+  sonst fuer sich selbst
+- `admin` darf alle Layouts verwalten; `landlord` darf nur eigene
+  Organisations- oder persoenliche Layouts verwalten; `tenant` und `user` haben
+  keinen Zugriff
+- aktive Layouts koennen nicht direkt geloescht werden; sie muessen vorher
+  archiviert werden
+- beim Aktivieren eines Layouts werden andere aktive Layouts desselben Owners
+  fuer dieselbe Kombination aus `document_type` und `locale` archiviert
+- Header und Footer nutzen dieselben Platzhalter wie Dokumentvorlagen; wenn
+  `placeholders` fehlt, extrahiert der Server sie aus `header_content` und
+  `footer_content`
+- bei der PDF-Erzeugung wird zuerst ein aktives Organisationslayout des
+  Vermieters gesucht, danach ein persoenliches Vermieterlayout; ohne aktives
+  Layout wird kein Header/Footer/Banner gerendert
+- erzeugte Dokumentversionen speichern `document_layout_template_id` und
+  `layout_snapshot`; reine Mieter-Sichten erhalten diese internen Layoutfelder
+  nicht
+
 Beim Anlegen gilt:
 
 - `document_type` ist erforderlich, z. B. `rental_agreement_contract`
@@ -252,7 +282,7 @@ Beim Anlegen gilt:
 Beim Erzeugen gilt:
 
 - die Vorlage muss aktiv sein; ohne zugewiesene Vorlage wird eine aktive Vorlage zum `document_type` gesucht
-- die erzeugte `DocumentVersion` speichert `content_snapshot`, `template_snapshot`, `data_snapshot`, `generated_by_id` und `generated_at`
+- die erzeugte `DocumentVersion` speichert `content_snapshot`, `template_snapshot`, optional `layout_snapshot`, `data_snapshot`, `generated_by_id` und `generated_at`
 - `Document.status` und `DocumentVersion.status` werden auf `generated` gesetzt
 - die PDF-Datei wird als `DocumentFile` mit `file_type=generated_pdf` gespeichert
 - wenn ein bereits erzeugtes Dokument erneut erzeugt wird, wird die vorherige neueste Version auf `void` gesetzt

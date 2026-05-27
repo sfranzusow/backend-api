@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Document;
+use App\Models\DocumentLayoutTemplate;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\User;
@@ -23,11 +24,16 @@ class DocumentVersionFactory extends Factory
         return [
             'document_id' => Document::factory(),
             'document_template_id' => DocumentTemplate::factory(),
+            'document_layout_template_id' => DocumentLayoutTemplate::factory(),
             'version_number' => 1,
             'status' => fake()->randomElement(DocumentVersion::statuses()),
             'title' => fake()->sentence(3),
             'content_snapshot' => '<h1>Snapshot</h1>',
             'template_snapshot' => [
+                'name' => fake()->words(3, true),
+                'version' => 1,
+            ],
+            'layout_snapshot' => [
                 'name' => fake()->words(3, true),
                 'version' => 1,
             ],

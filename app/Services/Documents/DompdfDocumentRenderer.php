@@ -11,12 +11,27 @@ class DompdfDocumentRenderer
 {
     public function __construct(private Filesystem $files) {}
 
-    public function render(string $content): string
+    /**
+     * @param  array{header?: array{enabled?: bool, content?: ?string, banner_path?: ?string}, footer?: array{enabled?: bool, content?: ?string, banner_path?: ?string, page_numbers_enabled?: bool}}|null  $layout
+     */
+    public function render(string $content, ?array $layout = null): string
     {
         $this->ensureFontDirectoriesExist();
+        $header = $this->layoutSection($layout['header'] ?? null);
+        $footer = $this->layoutSection($layout['footer'] ?? null);
+        $pageNumbersEnabled = ($layout['footer']['enabled'] ?? false) === true
+            && ($layout['footer']['page_numbers_enabled'] ?? false) === true;
+        $hasHeader = $this->hasSectionContent($header);
+        $hasFooter = $this->hasSectionContent($footer) || $pageNumbersEnabled;
 
         $pdf = Pdf::loadView('pdf.document', [
             'content' => $content,
+            'headerContent' => $header['content'],
+            'footerContent' => $footer['content'],
+            'headerBannerPath' => $header['banner_path'],
+            'footerBannerPath' => $footer['banner_path'],
+            'hasHeader' => $hasHeader,
+            'hasFooter' => $hasFooter,
         ])
             ->setPaper('a4', 'portrait')
             ->setWarnings(false)
@@ -28,9 +43,63 @@ class DompdfDocumentRenderer
             ]);
 
         $pdf->render();
-        $this->addPageNumbers($pdf);
+
+        if ($pageNumbersEnabled) {
+            $this->addPageNumbers($pdf);
+        }
 
         return $pdf->output();
+    }
+
+    /**
+     * @param  array{enabled?: bool, content?: ?string, banner_path?: ?string}|null  $section
+     * @return array{content: ?string, banner_path: ?string}
+     */
+    private function layoutSection(?array $section): array
+    {
+        if (($section['enabled'] ?? false) !== true) {
+            return [
+                'content' => null,
+                'banner_path' => null,
+            ];
+        }
+
+        return [
+            'content' => $this->nonEmptyString($section['content'] ?? null),
+            'banner_path' => $this->publicBannerPath($section['banner_path'] ?? null),
+        ];
+    }
+
+    /**
+     * @param  array{content: ?string, banner_path: ?string}  $section
+     */
+    private function hasSectionContent(array $section): bool
+    {
+        return $section['content'] !== null || $section['banner_path'] !== null;
+    }
+
+    private function nonEmptyString(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function publicBannerPath(mixed $path): ?string
+    {
+        $path = $this->nonEmptyString($path);
+
+        if ($path === null) {
+            return null;
+        }
+
+        $fullPath = public_path(ltrim($path, '/'));
+
+        return $this->files->isFile($fullPath) ? $fullPath : null;
     }
 
     private function addPageNumbers(DompdfPdf $pdf): void
