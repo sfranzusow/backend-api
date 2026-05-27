@@ -24,6 +24,7 @@ tags:
   - name: Health
   - name: Auth
   - name: Users
+  - name: Organizations
   - name: Addresses
   - name: BankAccounts
   - name: Properties
@@ -299,6 +300,220 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /organizations:
+    get:
+      tags: [Organizations]
+      summary: Organisationen listen
+      description: |
+        Listet Organisationen fuer die administrative Verwaltung. Aktuell nur
+        fuer `admin`. Benutzer ohne Organisation bleiben erlaubt; die
+        Zuordnung von Usern zu Organisationen erfolgt ueber die User-API und
+        ist ebenfalls admin-only.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Teilstring-Filter auf Organisationsname
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Teilstring-Filter auf E-Mail
+        - $ref: '#/components/parameters/PerPage'
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [id, name, type, email]
+            default: id
+        - $ref: '#/components/parameters/Direction'
+      responses:
+        '200':
+          description: Paginierte Liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      tags: [Organizations]
+      summary: Organisation anlegen
+      description: Erstellt eine Organisation. Aktuell nur fuer `admin`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreOrganizationRequest'
+      responses:
+        '201':
+          description: Organisation angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /organizations/{organization}:
+    parameters:
+      - name: organization
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Organizations]
+      summary: Einzelne Organisation abrufen
+      description: Zeigt eine Organisation. Aktuell nur fuer `admin`.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Organizations]
+      summary: Organisation aktualisieren
+      description: Aktualisiert eine Organisation. Entspricht fachlich `PATCH`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    patch:
+      tags: [Organizations]
+      summary: Organisation teilweise aktualisieren
+      description: Aktualisiert eine Organisation. Aktuell nur fuer `admin`.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Organization'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      tags: [Organizations]
+      summary: Organisation loeschen
+      description: |
+        Loescht eine Organisation. Aktuell nur fuer `admin`.
+
+        Organisationen mit zugeordneten Usern, Bankkonten oder Dokumentlayouts
+        koennen nicht geloescht werden.
+      security:
+        - sanctumBearer: []
+      responses:
+        '204':
+          description: Kein Inhalt
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Organisation hat noch abhaengige Daten
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
 
   /addresses:
     get:
@@ -2606,6 +2821,10 @@ components:
 
     Organization:
       type: object
+      description: |
+        Organisation, z. B. Firma, Hausverwaltung oder gewerblicher Vermieter.
+        Benutzer koennen optional ueber `organization_id` zugeordnet sein; ein
+        User ohne Organisation bleibt erlaubt.
       required: [id, name, created_at, updated_at]
       properties:
         id:
@@ -2633,6 +2852,22 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    OrganizationPaginator:
+      type: object
+      description: Laravel paginierte Resource-Collection (data + links + meta)
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
 
     BankAccount:
       type: object
@@ -2838,12 +3073,66 @@ components:
         is_default:
           type: boolean
 
+    StoreOrganizationRequest:
+      type: object
+      description: Erstellt eine Organisation. Aktuell nur fuer `admin`.
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Muster Verwaltung
+        type:
+          type: string
+          nullable: true
+          maxLength: 100
+          example: property_management
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 255
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        website:
+          type: string
+          nullable: true
+          maxLength: 255
+
+    UpdateOrganizationRequest:
+      type: object
+      description: Aktualisiert eine Organisation. Alle Felder sind optional.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        type:
+          type: string
+          nullable: true
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 255
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        website:
+          type: string
+          nullable: true
+          maxLength: 255
+
     StoreUserRequest:
       type: object
       description: |
         Ohne Feld `roles` weist das Backend automatisch die Rolle `user` zu.
         Mit `roles` werden die angegebenen Spatie-Rollennamen gesetzt (`syncRoles`);
         dafür ist die Berechtigung `assignRoles` nötig.
+        `organization_id` darf nur von `admin` gesetzt werden.
       required: [name, email, password, password_confirmation]
       properties:
         name:
@@ -2886,7 +3175,7 @@ components:
         organization_id:
           type: integer
           nullable: true
-          description: Optional; existierende `organizations.id`
+          description: Optional; existierende `organizations.id`; nur fuer `admin`
         roles:
           type: array
           items:
@@ -2901,8 +3190,8 @@ components:
         ohne `current_password` setzen.
         Feld `roles` setzt Rollen per `syncRoles` (leeres Array entfernt alle Rollen);
         nur mit Berechtigung `assignRoles`, eigene Rollen nicht per API änderbar.
-        Feld `organization_id` ist administrative User-Verwaltung und fuer reine
-        Profilupdates verboten.
+        Feld `organization_id` ist administrative User-Verwaltung, nur fuer
+        `admin` erlaubt und fuer reine Profilupdates verboten.
       properties:
         name:
           type: string
@@ -2944,7 +3233,7 @@ components:
         organization_id:
           type: integer
           nullable: true
-          description: Optional; existierende `organizations.id`; `null` entfernt die Zuordnung; nicht bei reinen Profilupdates erlaubt
+          description: Optional; existierende `organizations.id`; `null` entfernt die Zuordnung; nur fuer `admin`
         current_password:
           type: string
           description: Erforderlich wenn authentifizierter User sich selbst aktualisiert und `password` gesetzt ist

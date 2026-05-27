@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -34,9 +35,20 @@ class StoreUserRequest extends FormRequest
             'address_zip_code' => ['sometimes', 'nullable', 'string', 'max:20'],
             'address_city' => ['sometimes', 'nullable', 'string', 'max:255'],
             'address_country' => ['sometimes', 'nullable', 'string', 'size:2'],
-            'organization_id' => ['sometimes', 'nullable', 'integer', Rule::exists('organizations', 'id')],
+            'organization_id' => [
+                Rule::prohibitedIf(fn () => ! $this->canManageOrganizationAssignment()),
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('organizations', 'id'),
+            ],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
         ];
+    }
+
+    private function canManageOrganizationAssignment(): bool
+    {
+        return $this->user()?->hasRole(RoleName::Admin->value) === true;
     }
 }

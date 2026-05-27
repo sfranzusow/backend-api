@@ -39,7 +39,7 @@ Aktuell gibt es diese Rollen:
 - `tenant`
 - `user`
 
-Die Rollen steuern jetzt `users`, `properties`, `addresses` und `rental-agreements` ueber Policies und serverseitige Filter.
+Die Rollen steuern jetzt `users`, `organizations`, `properties`, `addresses` und `rental-agreements` ueber Policies und serverseitige Filter.
 
 ## Was die API macht
 
@@ -64,11 +64,29 @@ Sie enthaelt jetzt auch einfache Kontaktdaten: Telefonnummer, aktuelle Adresse u
 Besonderheiten:
 
 - Beim Anlegen eines Users wird ohne Rollenangabe automatisch die Rolle `user` gesetzt.
-- Beim Anlegen und durch administrative User-Verwaltung kann `organization_id` gesetzt werden.
+- Nur `admin` darf beim Anlegen oder Aktualisieren eines Users `organization_id` setzen, aendern oder entfernen.
 - Benutzer koennen im eigenen Profil Kontaktdaten wie `phone_number` und aktuelle Adressfelder pflegen.
 - Ein Benutzer darf sein eigenes Profil aktualisieren, wenn seine Rolle das erlaubt.
 - Eigene Rollen duerfen nicht ueber die API geaendert werden.
 - Admins duerfen fast alles, koennen aber nicht den eigenen Account loeschen oder die eigenen Rollen aendern.
+
+### Organisationen
+
+Die Organisations-API verwaltet Firmen, Hausverwaltungen oder andere
+Organisationen, denen Benutzer optional zugeordnet werden koennen.
+
+- `GET /organizations`: Organisationen listen
+- `POST /organizations`: Organisation anlegen
+- `GET /organizations/{organization}`: einzelne Organisation ansehen
+- `PUT/PATCH /organizations/{organization}`: Organisation aktualisieren
+- `DELETE /organizations/{organization}`: Organisation loeschen
+
+Besonderheiten:
+
+- aktuell darf nur `admin` Organisationen verwalten
+- ein User darf weiterhin `organization_id=null` haben, z. B. ein privater Vermieter
+- Organisationszuordnung von Benutzern erfolgt ausschliesslich ueber Admin-User-Verwaltung
+- Organisationen mit zugeordneten Usern, Bankkonten oder Dokumentlayouts koennen nicht geloescht werden
 
 ### Adressen
 

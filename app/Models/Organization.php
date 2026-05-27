@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Policies\OrganizationPolicy;
 use Database\Factories\OrganizationFactory;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+#[UsePolicy(OrganizationPolicy::class)]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */

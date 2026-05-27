@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -75,7 +74,6 @@ class UpdateUserRequest extends FormRequest
             return false;
         }
 
-        return $authUser->hasRole(RoleName::Admin->value)
-            || $authUser->can(PermissionName::UsersUpdate->value);
+        return $authUser->hasRole(RoleName::Admin->value);
     }
 }

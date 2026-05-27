@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DocumentLayoutTemplateController;
 use App\Http\Controllers\Api\DocumentReminderController;
 use App\Http\Controllers\Api\DocumentTemplateController;
 use App\Http\Controllers\Api\DocumentTemplatePlaceholderController;
+use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyMemberController;
@@ -29,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::apiResource('users', UserController::class);
+    Route::apiResource('organizations', OrganizationController::class);
     Route::apiResource('addresses', AddressController::class);
     Route::apiResource('bank-accounts', BankAccountController::class);
     Route::apiResource('properties', PropertyController::class);
