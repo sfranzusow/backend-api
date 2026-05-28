@@ -34,6 +34,7 @@ class PaymentResource extends JsonResource
             'payee' => UserResource::make($this->whenLoaded('payee')),
             'description' => $this->description,
             'metadata' => $this->metadata,
+            'reminders' => ReminderResource::collection($this->whenLoaded('reminders')),
             'actions' => $this->actions($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

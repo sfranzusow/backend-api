@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Enums\RoleName;
 use App\Models\Payment;
 use App\Models\Property;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -184,6 +185,59 @@ class RentalAgreementPaymentApiTest extends TestCase
         $this->actingAs($tenant, 'sanctum')
             ->deleteJson('/api/payments/'.$payment->id)
             ->assertForbidden();
+    }
+
+    public function test_tenant_can_filter_payments_by_due_date_and_include_assigned_reminders(): void
+    {
+        $tenant = User::factory()->create();
+        $tenant->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $tenant->id,
+        ]);
+        $matchingPayment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+            'due_date' => '2026-06-15',
+        ]);
+        Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+            'due_date' => '2026-08-01',
+        ]);
+        $assignedReminder = Reminder::factory()->create([
+            'remindable_type' => Payment::class,
+            'remindable_id' => $matchingPayment->id,
+            'assigned_to_id' => $tenant->id,
+            'title' => 'Zahlung pruefen',
+        ]);
+        $internalReminder = Reminder::factory()->create([
+            'remindable_type' => Payment::class,
+            'remindable_id' => $matchingPayment->id,
+            'title' => 'Intern nachfassen',
+        ]);
+
+        $this->actingAs($tenant, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/payments?due_from=2026-06-01&due_until=2026-06-30&include=reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingPayment->id)
+            ->assertJsonCount(1, 'data.0.reminders')
+            ->assertJsonPath('data.0.reminders.0.id', $assignedReminder->id)
+            ->assertJsonMissing(['title' => $internalReminder->title]);
+    }
+
+    public function test_payment_index_rejects_unknown_includes(): void
+    {
+        $tenant = User::factory()->create();
+        $tenant->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->actingAs($tenant, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/payments?include=reminders,unknown')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['include']);
     }
 
     public function test_landlord_cannot_manage_payments_for_unmanaged_rental_agreement(): void

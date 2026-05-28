@@ -20,6 +20,7 @@
 - Paket 7 umgesetzt: generische `Payment`-Struktur für Miete, Kaution, Rückzahlungen und Nebenkosten samt API und Doku ergänzt.
 - Paket 8 erster Schnitt umgesetzt: Mieter sehen Dokumente erst ab `shared`/`signed_uploaded`, dürfen signierte Dateien nur bei freigegebenen Dokumenten hochladen und sehen nur eigene Reminder-Zuweisungen; Vermieter/Admin behalten die vollständige Arbeitsakte.
 - Paket 8 vertieft: Dokument- und Mietvertrags-Responses liefern `actions` für Frontend-Buttons; reine Mieter-Sichten blenden interne Notizen, Template-/Snapshot-/Storage- und Creator-Felder aus.
+- Paket 8 abgerundet: Dokumentlisten am Mietvertrag können nach `status` und `document_type` gefiltert werden; Mietvertragslisten unterstützen `starts_from`/`starts_until` und `include=documents,payments,reminders`; Zahlungslisten unterstützen `due_from`/`due_until` und `include=reminders`. Tenant-seitig bleiben Dokumente und Reminder auf sichtbare bzw. eigene Zuweisungen begrenzt.
 - Template-Verwaltung umgesetzt: Admin-API für Dokumentvorlagen mit CRUD, Aktivierung, Archivierung konkurrierender aktiver Vorlagen und Platzhaltervalidierung.
 - Bankverbindungen/Zahlungsempfänger umgesetzt: `BankAccount` für Benutzer oder Organisationen, CRUD-API für Admin/Landlord, optionale `bank_account_id` am Mietvertrag, Validierung gegen Vermieter/Organisation, Snapshot- und Placeholder-Erweiterung für Vertragsdokumente.
 - AGENTS.md erweitert: Laravel-Best-Practice-Regeln und class-basierter Teststil für Pest/PHPUnit-kompatible Tests festgehalten.
@@ -32,7 +33,6 @@
 - Placeholder-Whitelist und Dokument-Snapshot für weitere echte Vertragsvorlagen erweitern.
 - Robusten mehrseitigen PDF-Renderer für echte Vertragsdokumente vorbereiten; der aktuelle Renderer reicht nur für die technische Pipeline.
 - Frontend-Admin-Oberfläche für Dokumentvorlagen bauen.
-- Paket 8 abrunden: Listenfilter und optionale Response-Includes für wiederkehrende Frontend-Ansichten schärfen.
 
 ### Frontend-Übergabe
 

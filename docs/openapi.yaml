@@ -1097,6 +1097,12 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /properties/{property}/members:
+    parameters:
+      - name: property
+        in: path
+        required: true
+        schema:
+          type: integer
     put:
       tags: [Properties]
       summary: Property-Mitglieder inkl. Rolle synchronisieren
@@ -1144,6 +1150,10 @@ paths:
         `landlord` sieht nur Mietverträge, bei denen er `landlord_id` ist.
         `tenant` sieht nur Mietverträge, bei denen er `tenant_id` ist.
         `user` hat keinen Zugriff.
+        Mit `include=documents,payments,reminders` koennen wiederkehrende
+        Frontend-Karten gezielt mitgeladen werden. Fuer reine Mieter-Sichten
+        werden bei Dokumenten und Remindern weiterhin nur sichtbare bzw.
+        zugewiesene Eintraege ausgeliefert.
       security:
         - sanctumBearer: []
       parameters:
@@ -1152,6 +1162,29 @@ paths:
         - $ref: '#/components/parameters/RentalAgreementPropertyId'
         - $ref: '#/components/parameters/RentalAgreementLandlordId'
         - $ref: '#/components/parameters/RentalAgreementTenantId'
+        - name: starts_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filtert Mietvertraege mit `date_from` am oder nach diesem Datum.
+        - name: starts_until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filtert Mietvertraege mit `date_from` am oder vor diesem Datum.
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            example: documents,payments,reminders
+          description: |
+            Kommagetrennte optionale Includes. Erlaubt:
+            `documents`, `payments`, `reminders`.
       responses:
         '200':
           description: OK
@@ -1211,9 +1244,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /rental-agreements/{rentalAgreement}:
+  /rental-agreements/{rental_agreement}:
     parameters:
-      - name: rentalAgreement
+      - name: rental_agreement
         in: path
         required: true
         schema:
@@ -1248,7 +1281,7 @@ paths:
       tags: [RentalAgreements]
       summary: Mietvertrag aktualisieren
       description: |
-        Entspricht derselben Update-Logik wie `PATCH /rental-agreements/{rentalAgreement}`.
+        Entspricht derselben Update-Logik wie `PATCH /rental-agreements/{rental_agreement}`.
         Nur für `admin` oder den zugeordneten `landlord`, der das zugehörige
         Objekt als Vermieter verwaltet.
 
@@ -1355,9 +1388,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /rental-agreements/{rentalAgreement}/documents:
+  /rental-agreements/{rental_agreement}/documents:
     parameters:
-      - name: rentalAgreement
+      - name: rental_agreement
         in: path
         required: true
         schema:
@@ -1373,8 +1406,34 @@ paths:
         Entwürfe, nur erzeugte und verworfene Dokumente bleiben tenant-seitig
         verborgen.
         Erzeugte Versionen und Dateien werden als `latest_version` mitgeliefert.
+        Mit `include=reminders` werden Reminder mitgeladen; fuer reine
+        Mieter-Sichten nur die dem Mieter selbst zugewiesenen Reminder.
       security:
         - sanctumBearer: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, generated, shared, signed_uploaded, void]
+          description: Filtert nach Dokumentstatus. Fuer reine Mieter-Sichten greifen weiterhin nur tenant-sichtbare Status.
+        - name: document_type
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+            example: rental_agreement_contract
+          description: Filtert nach Dokumenttyp.
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            example: reminders
+          description: |
+            Kommagetrennte optionale Includes. Aktuell erlaubt: `reminders`.
       responses:
         '200':
           description: OK
@@ -1394,6 +1453,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler fuer Filter oder Includes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
     post:
       tags: [Documents]
       summary: Dokument-Metadaten an Mietvertrag hängen
@@ -1435,9 +1500,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /rental-agreements/{rentalAgreement}/payments:
+  /rental-agreements/{rental_agreement}/payments:
     parameters:
-      - name: rentalAgreement
+      - name: rental_agreement
         in: path
         required: true
         schema:
@@ -1452,6 +1517,8 @@ paths:
         `direction` ist aus Sicht des Vertrags/Vermieters definiert:
         `incoming` bedeutet Zahlung Richtung Vermieter, `outgoing` bedeutet
         Auszahlung vom Vermieter Richtung Mieter.
+        Mit `include=reminders` werden Reminder an Zahlungen mitgeladen; fuer
+        reine Mieter-Sichten nur eigene Zuweisungen.
       security:
         - sanctumBearer: []
       parameters:
@@ -1473,6 +1540,28 @@ paths:
           schema:
             type: string
             enum: [planned, pending, paid, overdue, cancelled]
+        - name: due_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filtert Zahlungen mit `due_date` am oder nach diesem Datum.
+        - name: due_until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Filtert Zahlungen mit `due_date` am oder vor diesem Datum.
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            example: reminders
+          description: |
+            Kommagetrennte optionale Includes. Aktuell erlaubt: `reminders`.
       responses:
         '200':
           description: OK
@@ -1492,6 +1581,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler fuer Filter oder Includes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
     post:
       tags: [Payments]
       summary: Zahlung am Mietvertrag anlegen
@@ -1540,9 +1635,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /rental-agreements/{rentalAgreement}/reminders:
+  /rental-agreements/{rental_agreement}/reminders:
     parameters:
-      - name: rentalAgreement
+      - name: rental_agreement
         in: path
         required: true
         schema:
@@ -1553,7 +1648,7 @@ paths:
       description: |
         Listet Aufgaben und Erinnerungen direkt am Mietvertrag, z. B.
         "Kautionseingang pruefen". Es gilt dieselbe Leseberechtigung wie bei
-        `GET /rental-agreements/{rentalAgreement}`.
+        `GET /rental-agreements/{rental_agreement}`.
 
         `tenant` erhält nur Reminder, die ihm selbst über `assigned_to_id`
         zugewiesen sind.
@@ -3901,10 +3996,21 @@ components:
           allOf:
             - $ref: '#/components/schemas/BankAccount'
           nullable: true
+        documents:
+          type: array
+          description: Nur enthalten, wenn `include=documents` verwendet wurde.
+          items:
+            $ref: '#/components/schemas/Document'
         payments:
           type: array
+          description: Nur enthalten, wenn `include=payments` verwendet wurde.
           items:
             $ref: '#/components/schemas/Payment'
+        reminders:
+          type: array
+          description: Nur enthalten, wenn `include=reminders` verwendet wurde.
+          items:
+            $ref: '#/components/schemas/Reminder'
         actions:
           $ref: '#/components/schemas/RentalAgreementActions'
         created_at:
@@ -3947,7 +4053,7 @@ components:
           description: Für `landlord` nur selbst verwaltete Objekte.
         landlord_id:
           type: integer
-          description: Für `landlord` muss dies die eigene Benutzer-ID sein.
+          description: Für `landlord` muss dies die eigene Benutzer-ID sein; muss von `tenant_id` abweichen.
         tenant_id:
           type: integer
         bank_account_id:
@@ -3961,27 +4067,34 @@ components:
           type: string
           format: date
           nullable: true
+          description: Muss, wenn gesetzt, am oder nach `date_from` liegen.
         rent_cold:
           type: number
+          minimum: 0
         rent_warm:
           type: number
+          minimum: 0
           nullable: true
         service_charges:
           type: number
+          minimum: 0
           nullable: true
         deposit:
           type: number
+          minimum: 0
           nullable: true
         currency:
           type: string
           minLength: 3
           maxLength: 3
+          default: EUR
         status:
           type: string
           enum: [draft]
           default: draft
         notes:
           type: string
+          nullable: true
 
     UpdateRentalAgreementRequest:
       type: object
@@ -4000,7 +4113,7 @@ components:
           description: Für `landlord` nur selbst verwaltete Objekte.
         landlord_id:
           type: integer
-          description: Für `landlord` muss dies die eigene Benutzer-ID bleiben.
+          description: Für `landlord` muss dies die eigene Benutzer-ID bleiben; wenn `tenant_id` ebenfalls gesendet wird, muss der Wert abweichen.
         tenant_id:
           type: integer
         bank_account_id:
@@ -4014,16 +4127,21 @@ components:
           type: string
           format: date
           nullable: true
+          description: Muss, wenn gesetzt, am oder nach `date_from` liegen.
         rent_cold:
           type: number
+          minimum: 0
         rent_warm:
           type: number
+          minimum: 0
           nullable: true
         service_charges:
           type: number
+          minimum: 0
           nullable: true
         deposit:
           type: number
+          minimum: 0
           nullable: true
         currency:
           type: string
@@ -4040,6 +4158,7 @@ components:
             `ended` -> `ended`.
         notes:
           type: string
+          nullable: true
 
     RentalAgreementPaginator:
       type: object
@@ -4115,6 +4234,11 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+        reminders:
+          type: array
+          description: Nur enthalten, wenn `include=reminders` verwendet wurde.
+          items:
+            $ref: '#/components/schemas/Reminder'
         actions:
           $ref: '#/components/schemas/PaymentActions'
         created_at:

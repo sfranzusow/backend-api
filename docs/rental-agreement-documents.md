@@ -667,11 +667,22 @@ Umgesetzt:
   Frontend-Buttons.
 - Mietvertrags-Responses liefern `actions` fuer wiederkehrende
   Verwaltungsbuttons.
+- Dokumentlisten am Mietvertrag koennen nach `status` und `document_type`
+  gefiltert werden.
+- `GET /rental-agreements/{rentalAgreement}/documents?include=reminders`
+  liefert Reminder gezielt fuer Frontend-Listenkarten mit. Fuer reine
+  Mieter-Sichten werden dabei nur eigene `assigned_to_id`-Zuweisungen
+  ausgeliefert.
+- Mietvertragslisten koennen nach Vertragsbeginn ueber `starts_from` und
+  `starts_until` gefiltert werden und mit
+  `include=documents,payments,reminders` typische Uebersichts-Karten in einer
+  Antwort bedienen.
+- Zahlungslisten am Mietvertrag koennen nach `due_from` und `due_until`
+  gefiltert werden und mit `include=reminders` faellige Zahlungserinnerungen
+  fuer Listenansichten mitliefern.
 
 Weiterer geplanter Umfang:
 
-- Listenfilter und Response-Includes fuer wiederkehrende Frontend-Ansichten
-  schaerfen
 - OpenAPI-Beispiele fuer typische Vermieter- und Mieter-Responses ergaenzen,
   wenn die Endpunkte stabil sind
 

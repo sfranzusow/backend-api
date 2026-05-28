@@ -4,7 +4,10 @@ namespace Tests\Feature\Api;
 
 use App\Enums\RoleName;
 use App\Models\BankAccount;
+use App\Models\Document;
+use App\Models\Payment;
 use App\Models\Property;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -177,6 +180,103 @@ class RentalAgreementApiTest extends TestCase
             ->assertSuccessful()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $matchingAgreement->id);
+    }
+
+    public function test_rental_agreement_index_can_filter_start_date_and_include_frontend_relations(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $matchingAgreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'date_from' => '2026-02-01',
+        ]);
+        RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'date_from' => '2026-05-01',
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $matchingAgreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+        ]);
+        $payment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $matchingAgreement->id,
+        ]);
+        $reminder = Reminder::factory()->create([
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $matchingAgreement->id,
+            'title' => 'Vertragsstart pruefen',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements?starts_from=2026-01-01&starts_until=2026-03-31&include=documents,payments,reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingAgreement->id)
+            ->assertJsonPath('data.0.documents.0.id', $document->id)
+            ->assertJsonPath('data.0.payments.0.id', $payment->id)
+            ->assertJsonPath('data.0.reminders.0.id', $reminder->id);
+    }
+
+    public function test_tenant_rental_agreement_index_includes_only_visible_documents_and_assigned_reminders(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $visibleDocument = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
+            'title' => 'Freigegebenes Dokument',
+        ]);
+        $hiddenDocument = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+            'title' => 'Internes Dokument',
+        ]);
+        $assignedReminder = Reminder::factory()->create([
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $agreement->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Bitte Vertrag pruefen',
+        ]);
+        $internalReminder = Reminder::factory()->create([
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $agreement->id,
+            'title' => 'Interne Wiedervorlage',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements?include=documents,reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonCount(1, 'data.0.documents')
+            ->assertJsonCount(1, 'data.0.reminders')
+            ->assertJsonPath('data.0.documents.0.id', $visibleDocument->id)
+            ->assertJsonPath('data.0.reminders.0.id', $assignedReminder->id)
+            ->assertJsonMissing(['title' => $hiddenDocument->title])
+            ->assertJsonMissing(['title' => $internalReminder->title]);
+    }
+
+    public function test_rental_agreement_index_rejects_unknown_includes(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements?include=documents,unknown')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['include']);
     }
 
     public function test_it_validates_different_landlord_and_tenant(): void

@@ -163,6 +163,102 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonMissing(['title' => $generatedDocument->title]);
     }
 
+    public function test_landlord_can_filter_documents_by_status_and_document_type(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $agreement = RentalAgreement::factory()->create([
+            'landlord_id' => $user->id,
+        ]);
+        $agreement->property->users()->attach($user->id, ['role' => RoleName::Landlord->value]);
+
+        $matchingDocument = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
+            'title' => 'Passender Vertrag',
+        ]);
+
+        Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_GENERATED,
+            'title' => 'Falscher Status',
+        ]);
+
+        Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'handover_protocol',
+            'status' => Document::STATUS_SHARED,
+            'title' => 'Falscher Dokumenttyp',
+        ]);
+
+        Document::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/documents?status=shared&document_type=rental_agreement_contract')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingDocument->id);
+    }
+
+    public function test_document_list_can_include_tenant_visible_reminders(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Tenant->value);
+        $agreement = RentalAgreement::factory()->create([
+            'tenant_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+            'status' => Document::STATUS_SHARED,
+        ]);
+        $tenantReminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'title' => 'Unterschrift faellig',
+            'assigned_to_id' => $user->id,
+        ]);
+        $landlordReminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'title' => 'Interne Wiedervorlage',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/documents')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.reminders');
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/documents?include=reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonCount(1, 'data.0.reminders')
+            ->assertJsonPath('data.0.reminders.0.id', $tenantReminder->id)
+            ->assertJsonMissing(['title' => $landlordReminder->title]);
+    }
+
+    public function test_document_list_rejects_unknown_includes(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $agreement = RentalAgreement::factory()->create([
+            'landlord_id' => $user->id,
+        ]);
+        $agreement->property->users()->attach($user->id, ['role' => RoleName::Landlord->value]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/documents?include=reminders,unknown')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['include']);
+    }
+
     public function test_tenant_cannot_create_document_for_own_rental_agreement(): void
     {
         $user = User::factory()->create();
