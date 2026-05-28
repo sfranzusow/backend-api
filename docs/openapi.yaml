@@ -2527,14 +2527,14 @@ paths:
           type: integer
     get:
       tags: [Documents]
-      summary: Fristen und Erinnerungen eines Dokuments auflisten
+      summary: Dokument-Aufgaben und Erinnerungen auflisten
       description: |
         Listet Reminder zur Dokumentakte, z. B. fehlende Unterschrift oder
-        Wiedervorlage. Es gilt dieselbe Leseberechtigung wie bei
+        interne Dokument-Aufgabe. Es gilt dieselbe Leseberechtigung wie bei
         `GET /documents/{document}`.
 
         `tenant` erhält nur Reminder, die ihm selbst über `assigned_to_id`
-        zugewiesen sind. Interne Vermieter-Wiedervorlagen bleiben verborgen.
+        zugewiesen sind. Interne Vermieter-Erinnerungen bleiben verborgen.
       security:
         - sanctumBearer: []
       responses:
@@ -2558,7 +2558,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       tags: [Documents]
-      summary: Frist oder Erinnerung für Dokument anlegen
+      summary: Dokument-Aufgabe oder Erinnerung anlegen
       description: |
         Legt eine neue Erinnerung im Status `pending` an. Erlaubt für `admin`
         oder den zugeordneten `landlord`, der das zugehörige Objekt verwaltet.
@@ -2604,7 +2604,7 @@ paths:
           type: integer
     patch:
       tags: [Documents]
-      summary: Frist oder Erinnerung aktualisieren
+      summary: Dokument-Aufgabe oder Erinnerung aktualisieren
       description: |
         Aktualisiert Titel, Notizen, Fälligkeit, Erinnerungszeit, Zuweisung,
         Metadaten oder Status. Beim Wechsel auf `done` setzt der Server
@@ -2642,7 +2642,7 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
     delete:
       tags: [Documents]
-      summary: Frist oder Erinnerung löschen
+      summary: Dokument-Aufgabe oder Erinnerung löschen
       security:
         - sanctumBearer: []
       responses:
@@ -4121,7 +4121,7 @@ components:
 
     DocumentReminder:
       type: object
-      required: [id, document_id, title, due_at, status, actions, created_at, updated_at]
+      required: [id, document_id, title, due_at, status, display_status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -4135,13 +4135,32 @@ components:
         due_at:
           type: string
           format: date-time
+          description: |
+            "Fällig am": Deadline, bis wann die Aufgabe erledigt sein soll.
+            Wenn `status=pending` und `due_at` erreicht oder überschritten ist,
+            liefert `display_status=overdue`.
         remind_at:
           type: string
           format: date-time
           nullable: true
+          description: |
+            "Erinnern am": optionaler Zeitpunkt, ab dem die Aufgabe als zu
+            erinnern gilt. Muss vor oder gleich `due_at` liegen.
         status:
           type: string
           enum: [pending, done, cancelled]
+          description: Gespeicherter Bearbeitungsstatus.
+        display_status:
+          type: string
+          enum: [open, reminder_due, overdue, done, cancelled]
+          readOnly: true
+          description: |
+            Abgeleiteter Oberflächenstatus für Listen und Badges:
+            `open` = offen, noch nicht im Erinnerungszeitraum;
+            `reminder_due` = `remind_at` ist erreicht, aber `due_at` noch nicht;
+            `overdue` = `due_at` ist erreicht oder überschritten und die
+            Aufgabe ist noch `pending`; `done` und `cancelled` spiegeln den
+            gespeicherten Status.
         metadata:
           type: object
           nullable: true
@@ -4659,12 +4678,13 @@ components:
         due_at:
           type: string
           format: date-time
+          description: '"Fällig am": Deadline, bis wann die Aufgabe erledigt sein soll.'
           example: '2026-06-15T10:00:00Z'
         remind_at:
           type: string
           format: date-time
           nullable: true
-          description: Muss vor oder gleich `due_at` liegen.
+          description: '"Erinnern am": optionaler Zeitpunkt vor der Fälligkeit. Muss vor oder gleich `due_at` liegen.'
           example: '2026-06-10T10:00:00Z'
         assigned_to_id:
           type: integer
@@ -4687,10 +4707,12 @@ components:
         due_at:
           type: string
           format: date-time
+          description: '"Fällig am": Deadline, bis wann die Aufgabe erledigt sein soll.'
         remind_at:
           type: string
           format: date-time
           nullable: true
+          description: '"Erinnern am": optionaler Zeitpunkt vor der Fälligkeit. Muss vor oder gleich `due_at` liegen.'
         status:
           type: string
           enum: [pending, done, cancelled]

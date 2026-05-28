@@ -24,6 +24,7 @@ class DocumentReminderResource extends JsonResource
             'due_at' => $this->due_at?->toISOString(),
             'remind_at' => $this->remind_at?->toISOString(),
             'status' => $this->status,
+            'display_status' => $this->displayStatus(),
             'metadata' => $this->metadata,
             'assigned_to_id' => $this->assigned_to_id,
             'assignee' => UserResource::make($this->whenLoaded('assignee')),

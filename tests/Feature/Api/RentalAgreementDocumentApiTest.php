@@ -297,6 +297,69 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.0.actions.mark_done', true);
     }
 
+    public function test_document_reminder_response_exposes_display_status_from_dates(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+        ]);
+
+        DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'title' => 'Noch nicht erinnern',
+            'status' => DocumentReminder::STATUS_PENDING,
+            'remind_at' => '2026-06-15T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+        DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'title' => 'Jetzt erinnern',
+            'status' => DocumentReminder::STATUS_PENDING,
+            'remind_at' => '2026-06-10T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+        DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'title' => 'Versaeumt',
+            'status' => DocumentReminder::STATUS_PENDING,
+            'remind_at' => '2026-06-01T10:00:00+00:00',
+            'due_at' => '2026-06-10T10:00:00+00:00',
+        ]);
+        DocumentReminder::factory()->done()->create([
+            'document_id' => $document->id,
+            'title' => 'Erledigt',
+            'due_at' => '2026-06-10T10:00:00+00:00',
+        ]);
+        DocumentReminder::factory()->cancelled()->create([
+            'document_id' => $document->id,
+            'title' => 'Abgebrochen',
+            'due_at' => '2026-06-10T10:00:00+00:00',
+        ]);
+
+        $this->travelTo('2026-06-12T10:00:00+00:00', function () use ($user, $document): void {
+            $response = $this->actingAs($user, 'sanctum')
+                ->getJson('/api/documents/'.$document->id.'/reminders')
+                ->assertOk()
+                ->assertJsonCount(5, 'data');
+
+            $reminders = collect($response->json('data'))->keyBy('title');
+
+            $this->assertSame(DocumentReminder::DISPLAY_STATUS_OPEN, $reminders['Noch nicht erinnern']['display_status']);
+            $this->assertSame(DocumentReminder::DISPLAY_STATUS_REMINDER_DUE, $reminders['Jetzt erinnern']['display_status']);
+            $this->assertSame(DocumentReminder::DISPLAY_STATUS_OVERDUE, $reminders['Versaeumt']['display_status']);
+            $this->assertSame(DocumentReminder::STATUS_DONE, $reminders['Erledigt']['display_status']);
+            $this->assertSame(DocumentReminder::STATUS_CANCELLED, $reminders['Abgebrochen']['display_status']);
+        });
+    }
+
     public function test_tenant_can_view_but_not_create_document_reminders_for_own_rental_agreement(): void
     {
         $user = User::factory()->create();

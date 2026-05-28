@@ -21,6 +21,12 @@ class DocumentReminder extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const DISPLAY_STATUS_OPEN = 'open';
+
+    public const DISPLAY_STATUS_REMINDER_DUE = 'reminder_due';
+
+    public const DISPLAY_STATUS_OVERDUE = 'overdue';
+
     protected $fillable = [
         'document_id',
         'title',
@@ -42,6 +48,29 @@ class DocumentReminder extends Model
             'metadata' => 'array',
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function displayStatus(): string
+    {
+        if ($this->status === self::STATUS_DONE) {
+            return self::STATUS_DONE;
+        }
+
+        if ($this->status === self::STATUS_CANCELLED) {
+            return self::STATUS_CANCELLED;
+        }
+
+        $now = now();
+
+        if ($this->due_at?->lessThanOrEqualTo($now) === true) {
+            return self::DISPLAY_STATUS_OVERDUE;
+        }
+
+        if ($this->remind_at?->lessThanOrEqualTo($now) === true) {
+            return self::DISPLAY_STATUS_REMINDER_DUE;
+        }
+
+        return self::DISPLAY_STATUS_OPEN;
     }
 
     /**
