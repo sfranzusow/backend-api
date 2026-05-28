@@ -4,9 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
-use App\Models\DocumentReminder;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
+use App\Models\Payment;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Database\Seeders\DocumentTemplateSeeder;
@@ -93,8 +94,9 @@ class DocumentModelsTest extends TestCase
         $creator = User::factory()->create();
         $assignee = User::factory()->create();
 
-        $reminder = DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        $reminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Unterschrift prüfen',
             'due_at' => '2026-06-15 10:00:00',
             'remind_at' => '2026-06-10 10:00:00',
@@ -103,14 +105,40 @@ class DocumentModelsTest extends TestCase
         ]);
 
         $document->load('reminders');
-        $reminder->load(['document', 'creator', 'assignee']);
+        $reminder->load(['remindable', 'creator', 'assignee']);
 
         $this->assertCount(1, $document->reminders);
         $this->assertTrue($document->reminders->first()->is($reminder));
-        $this->assertTrue($reminder->document->is($document));
+        $this->assertTrue($reminder->remindable->is($document));
         $this->assertTrue($reminder->creator->is($creator));
         $this->assertTrue($reminder->assignee->is($assignee));
-        $this->assertSame(DocumentReminder::STATUS_PENDING, $reminder->status);
+        $this->assertSame(Reminder::STATUS_PENDING, $reminder->status);
+    }
+
+    public function test_rental_agreements_and_payments_can_have_deadline_reminders(): void
+    {
+        $agreement = RentalAgreement::factory()->create();
+        $payment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+        ]);
+
+        $agreementReminder = Reminder::factory()->create([
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $agreement->id,
+            'title' => 'Kautionseingang prüfen',
+        ]);
+        $paymentReminder = Reminder::factory()->create([
+            'remindable_type' => Payment::class,
+            'remindable_id' => $payment->id,
+            'title' => 'Zahlungseingang kontrollieren',
+        ]);
+
+        $agreement->load('reminders');
+        $payment->load('reminders');
+
+        $this->assertTrue($agreement->reminders->first()->is($agreementReminder));
+        $this->assertTrue($payment->reminders->first()->is($paymentReminder));
     }
 
     public function test_document_version_numbers_are_unique_per_document(): void

@@ -2,12 +2,12 @@
 
 namespace App\Http\Resources\Api;
 
-use App\Models\DocumentReminder;
+use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class DocumentReminderResource extends JsonResource
+class ReminderResource extends JsonResource
 {
     public static $wrap = null;
 
@@ -18,7 +18,8 @@ class DocumentReminderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'document_id' => $this->document_id,
+            'remindable_type' => class_basename($this->remindable_type),
+            'remindable_id' => $this->remindable_id,
             'title' => $this->title,
             'notes' => $this->notes,
             'due_at' => $this->due_at?->toISOString(),
@@ -43,18 +44,18 @@ class DocumentReminderResource extends JsonResource
     private function actions(Request $request): array
     {
         $authUser = $request->user();
-        $documentReminder = $this->resource;
+        $reminder = $this->resource;
 
-        if (! $authUser instanceof User || ! $documentReminder instanceof DocumentReminder) {
+        if (! $authUser instanceof User || ! $reminder instanceof Reminder) {
             return $this->emptyActions();
         }
 
-        $canUpdate = $authUser->can('update', $documentReminder);
+        $canUpdate = $authUser->can('update', $reminder);
 
         return [
             'update' => $canUpdate,
-            'delete' => $authUser->can('delete', $documentReminder),
-            'mark_done' => $canUpdate && $documentReminder->status === DocumentReminder::STATUS_PENDING,
+            'delete' => $authUser->can('delete', $reminder),
+            'mark_done' => $canUpdate && $reminder->status === Reminder::STATUS_PENDING,
         ];
     }
 

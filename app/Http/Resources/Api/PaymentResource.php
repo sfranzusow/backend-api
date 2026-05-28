@@ -2,6 +2,9 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Models\Payment as PaymentModel;
+use App\Models\Reminder;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,8 +34,32 @@ class PaymentResource extends JsonResource
             'payee' => UserResource::make($this->whenLoaded('payee')),
             'description' => $this->description,
             'metadata' => $this->metadata,
+            'actions' => $this->actions($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function actions(Request $request): array
+    {
+        $authUser = $request->user();
+        $payment = $this->resource;
+
+        if (! $authUser instanceof User || ! $payment instanceof PaymentModel) {
+            return [
+                'update' => false,
+                'delete' => false,
+                'create_reminder' => false,
+            ];
+        }
+
+        return [
+            'update' => $authUser->can('update', $payment),
+            'delete' => $authUser->can('delete', $payment),
+            'create_reminder' => $authUser->can('createForRemindable', [Reminder::class, $payment]),
         ];
     }
 }

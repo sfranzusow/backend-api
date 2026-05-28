@@ -2,21 +2,21 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Models\DocumentReminder;
+use App\Models\Reminder;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-class UpdateDocumentReminderRequest extends FormRequest
+class UpdateReminderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var DocumentReminder $documentReminder */
-        $documentReminder = $this->route('document_reminder');
+        /** @var Reminder $reminder */
+        $reminder = $this->route('reminder');
 
-        return $this->user()?->can('update', $documentReminder) ?? false;
+        return $this->user()?->can('update', $reminder) ?? false;
     }
 
     /**
@@ -29,7 +29,7 @@ class UpdateDocumentReminderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:2000'],
             'due_at' => ['sometimes', 'date'],
             'remind_at' => ['nullable', 'date'],
-            'status' => ['sometimes', 'string', Rule::in(DocumentReminder::statuses())],
+            'status' => ['sometimes', 'string', Rule::in(Reminder::statuses())],
             'assigned_to_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'metadata' => ['nullable', 'array'],
             'completed_at' => ['nullable', 'date'],
@@ -47,14 +47,14 @@ class UpdateDocumentReminderRequest extends FormRequest
                     return;
                 }
 
-                $documentReminder = $this->route('document_reminder');
+                $reminder = $this->route('reminder');
 
-                if (! $documentReminder instanceof DocumentReminder) {
+                if (! $reminder instanceof Reminder) {
                     return;
                 }
 
-                $dueAt = $this->input('due_at', $documentReminder->due_at);
-                $remindAt = $this->input('remind_at', $documentReminder->remind_at);
+                $dueAt = $this->input('due_at', $reminder->due_at);
+                $remindAt = $this->input('remind_at', $reminder->remind_at);
 
                 if ($dueAt === null || $remindAt === null) {
                     return;

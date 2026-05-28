@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[UsePolicy(DocumentPolicy::class)]
@@ -111,9 +112,9 @@ class Document extends Model
         return $this->hasOne(DocumentVersion::class)->latestOfMany('version_number');
     }
 
-    public function reminders(): HasMany
+    public function reminders(): MorphMany
     {
-        return $this->hasMany(DocumentReminder::class)
+        return $this->morphMany(Reminder::class, 'remindable')
             ->orderBy('due_at')
             ->orderBy('id');
     }

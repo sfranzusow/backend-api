@@ -5,9 +5,9 @@ namespace App\Http\Resources\Api;
 use App\Enums\RoleName;
 use App\Models\Document as DocumentModel;
 use App\Models\DocumentFile;
-use App\Models\DocumentReminder;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -39,7 +39,7 @@ class DocumentResource extends JsonResource
                 'template' => DocumentTemplateResource::make($this->whenLoaded('template')),
             ]),
             'latest_version' => DocumentVersionResource::make($this->whenLoaded('latestVersion')),
-            'reminders' => DocumentReminderResource::collection($this->whenLoaded('reminders')),
+            'reminders' => ReminderResource::collection($this->whenLoaded('reminders')),
             $this->mergeWhen(! $isTenantView, [
                 'created_by_id' => $this->created_by_id,
                 'creator' => UserResource::make($this->whenLoaded('creator')),
@@ -93,7 +93,7 @@ class DocumentResource extends JsonResource
                 && $latestVersion->canTransitionToStatus(DocumentVersion::STATUS_SIGNED_UPLOADED),
             'download_signed' => $authUser->can('downloadSigned', $document)
                 && $this->hasVersionFile($latestVersion, DocumentFile::TYPE_SIGNED_UPLOAD),
-            'create_reminder' => $authUser->can('createForDocument', [DocumentReminder::class, $document]),
+            'create_reminder' => $authUser->can('createForRemindable', [Reminder::class, $document]),
         ];
     }
 

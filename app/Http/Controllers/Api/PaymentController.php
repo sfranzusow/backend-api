@@ -26,7 +26,7 @@ class PaymentController extends Controller
         ]);
 
         $payments = $rentalAgreement->payments()
-            ->with(['payer:id,name,email', 'payee:id,name,email'])
+            ->with(['payable', 'payer:id,name,email', 'payee:id,name,email'])
             ->when($validated['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($validated['direction'] ?? null, fn ($query, $direction) => $query->where('direction', $direction))
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
@@ -43,6 +43,7 @@ class PaymentController extends Controller
             $this->attributesWithRentalAgreementDefaults($request->validated(), $rentalAgreement)
         );
 
+        $payment->setRelation('payable', $rentalAgreement);
         $payment->load(['payer:id,name,email', 'payee:id,name,email']);
 
         return response()->json([
@@ -54,7 +55,7 @@ class PaymentController extends Controller
     {
         $this->authorize('view', $payment);
 
-        $payment->loadMissing(['payer:id,name,email', 'payee:id,name,email']);
+        $payment->loadMissing(['payable', 'payer:id,name,email', 'payee:id,name,email']);
 
         return response()->json([
             'data' => new PaymentResource($payment),
@@ -64,7 +65,7 @@ class PaymentController extends Controller
     public function update(UpdatePaymentRequest $request, Payment $payment): JsonResponse
     {
         $payment->forceFill($this->attributesForUpdate($request->validated(), $payment))->save();
-        $payment->load(['payer:id,name,email', 'payee:id,name,email']);
+        $payment->load(['payable', 'payer:id,name,email', 'payee:id,name,email']);
 
         return response()->json([
             'data' => new PaymentResource($payment),

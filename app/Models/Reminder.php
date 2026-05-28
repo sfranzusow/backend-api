@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
-use App\Policies\DocumentReminderPolicy;
-use Database\Factories\DocumentReminderFactory;
+use App\Policies\ReminderPolicy;
+use Database\Factories\ReminderFactory;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[UsePolicy(DocumentReminderPolicy::class)]
-class DocumentReminder extends Model
+#[UsePolicy(ReminderPolicy::class)]
+class Reminder extends Model
 {
-    /** @use HasFactory<DocumentReminderFactory> */
+    /** @use HasFactory<ReminderFactory> */
     use HasFactory;
 
     public const STATUS_PENDING = 'pending';
@@ -28,7 +29,8 @@ class DocumentReminder extends Model
     public const DISPLAY_STATUS_OVERDUE = 'overdue';
 
     protected $fillable = [
-        'document_id',
+        'remindable_type',
+        'remindable_id',
         'title',
         'notes',
         'due_at',
@@ -85,9 +87,9 @@ class DocumentReminder extends Model
         ];
     }
 
-    public function document(): BelongsTo
+    public function remindable(): MorphTo
     {
-        return $this->belongsTo(Document::class);
+        return $this->morphTo();
     }
 
     public function creator(): BelongsTo

@@ -7,11 +7,12 @@ use App\Models\BankAccount;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\DocumentLayoutTemplate;
-use App\Models\DocumentReminder;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\Organization;
+use App\Models\Payment;
 use App\Models\Property;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Database\Seeders\DocumentTemplateSeeder;
@@ -38,8 +39,9 @@ class RentalAgreementDocumentApiTest extends TestCase
             'documentable_type' => RentalAgreement::class,
             'documentable_id' => $agreement->id,
         ]);
-        $reminder = DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        $reminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
         ]);
 
         $this->getJson('/api/rental-agreements/'.$agreement->id.'/documents')->assertUnauthorized();
@@ -53,8 +55,8 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->getJson('/api/documents/'.$document->id.'/signed-download')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id.'/reminders')->assertUnauthorized();
         $this->postJson('/api/documents/'.$document->id.'/reminders')->assertUnauthorized();
-        $this->patchJson('/api/document-reminders/'.$reminder->id)->assertUnauthorized();
-        $this->deleteJson('/api/document-reminders/'.$reminder->id)->assertUnauthorized();
+        $this->patchJson('/api/reminders/'.$reminder->id)->assertUnauthorized();
+        $this->deleteJson('/api/reminders/'.$reminder->id)->assertUnauthorized();
     }
 
     public function test_landlord_can_create_document_for_own_rental_agreement(): void
@@ -194,7 +196,7 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.documentable_id', $agreement->id);
     }
 
-    public function test_landlord_can_manage_document_reminders_for_own_rental_agreement(): void
+    public function test_landlord_can_manage_reminders_for_own_rental_agreement(): void
     {
         $user = User::factory()->create();
         $user->assignRole(RoleName::Landlord->value);
@@ -224,7 +226,9 @@ class RentalAgreementDocumentApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('data.title', 'Unterschrift prüfen')
-            ->assertJsonPath('data.status', DocumentReminder::STATUS_PENDING)
+            ->assertJsonPath('data.remindable_type', 'Document')
+            ->assertJsonPath('data.remindable_id', $document->id)
+            ->assertJsonPath('data.status', Reminder::STATUS_PENDING)
             ->assertJsonPath('data.assigned_to_id', $tenant->id)
             ->assertJsonPath('data.created_by_id', $user->id)
             ->assertJsonPath('data.metadata.channel', 'email')
@@ -234,11 +238,12 @@ class RentalAgreementDocumentApiTest extends TestCase
 
         $reminderId = $response->json('data.id');
 
-        $this->assertDatabaseHas('document_reminders', [
+        $this->assertDatabaseHas('reminders', [
             'id' => $reminderId,
-            'document_id' => $document->id,
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Unterschrift prüfen',
-            'status' => DocumentReminder::STATUS_PENDING,
+            'status' => Reminder::STATUS_PENDING,
             'assigned_to_id' => $tenant->id,
             'created_by_id' => $user->id,
         ]);
@@ -253,28 +258,110 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.0.actions.mark_done', true);
 
         $this->actingAs($user, 'sanctum')
-            ->patchJson('/api/document-reminders/'.$reminderId, [
-                'status' => DocumentReminder::STATUS_DONE,
+            ->patchJson('/api/reminders/'.$reminderId, [
+                'status' => Reminder::STATUS_DONE,
             ])
             ->assertOk()
-            ->assertJsonPath('data.status', DocumentReminder::STATUS_DONE)
+            ->assertJsonPath('data.status', Reminder::STATUS_DONE)
             ->assertJsonPath('data.actions.update', true)
             ->assertJsonPath('data.actions.delete', true)
             ->assertJsonPath('data.actions.mark_done', false);
 
-        $this->assertDatabaseHas('document_reminders', [
+        $this->assertDatabaseHas('reminders', [
             'id' => $reminderId,
-            'status' => DocumentReminder::STATUS_DONE,
+            'status' => Reminder::STATUS_DONE,
         ]);
-        $this->assertNotNull(DocumentReminder::query()->findOrFail($reminderId)->completed_at);
+        $this->assertNotNull(Reminder::query()->findOrFail($reminderId)->completed_at);
 
         $this->actingAs($user, 'sanctum')
-            ->deleteJson('/api/document-reminders/'.$reminderId)
+            ->deleteJson('/api/reminders/'.$reminderId)
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('document_reminders', [
+        $this->assertDatabaseMissing('reminders', [
             'id' => $reminderId,
         ]);
+    }
+
+    public function test_landlord_can_manage_reminders_for_rental_agreement(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/rental-agreements/'.$agreement->id.'/reminders', [
+                'title' => 'Kautionseingang prüfen',
+                'due_at' => '2026-06-15T10:00:00+00:00',
+                'remind_at' => '2026-06-10T10:00:00+00:00',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.remindable_type', 'RentalAgreement')
+            ->assertJsonPath('data.remindable_id', $agreement->id)
+            ->assertJsonPath('data.title', 'Kautionseingang prüfen')
+            ->assertJsonPath('data.status', Reminder::STATUS_PENDING)
+            ->assertJsonPath('data.actions.mark_done', true);
+
+        $reminderId = $response->json('data.id');
+
+        $this->assertDatabaseHas('reminders', [
+            'id' => $reminderId,
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $agreement->id,
+            'title' => 'Kautionseingang prüfen',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $reminderId)
+            ->assertJsonPath('data.0.remindable_type', 'RentalAgreement');
+    }
+
+    public function test_landlord_can_manage_reminders_for_payment(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $payment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/payments/'.$payment->id.'/reminders', [
+                'title' => 'Zahlungseingang kontrollieren',
+                'due_at' => '2026-06-15T10:00:00+00:00',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.remindable_type', 'Payment')
+            ->assertJsonPath('data.remindable_id', $payment->id)
+            ->assertJsonPath('data.title', 'Zahlungseingang kontrollieren')
+            ->assertJsonPath('data.actions.mark_done', true);
+
+        $reminderId = $response->json('data.id');
+
+        $this->assertDatabaseHas('reminders', [
+            'id' => $reminderId,
+            'remindable_type' => Payment::class,
+            'remindable_id' => $payment->id,
+            'title' => 'Zahlungseingang kontrollieren',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/payments/'.$payment->id.'/reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $reminderId)
+            ->assertJsonPath('data.0.remindable_type', 'Payment');
     }
 
     public function test_admin_reminder_response_exposes_management_actions(): void
@@ -282,9 +369,10 @@ class RentalAgreementDocumentApiTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole(RoleName::Admin->value);
         $document = Document::factory()->create();
-        $reminder = DocumentReminder::factory()->create([
-            'document_id' => $document->id,
-            'status' => DocumentReminder::STATUS_PENDING,
+        $reminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'status' => Reminder::STATUS_PENDING,
         ]);
 
         $this->actingAs($user, 'sanctum')
@@ -297,7 +385,7 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.0.actions.mark_done', true);
     }
 
-    public function test_document_reminder_response_exposes_display_status_from_dates(): void
+    public function test_reminder_response_exposes_display_status_from_dates(): void
     {
         $user = User::factory()->create();
         $user->assignRole(RoleName::Landlord->value);
@@ -312,34 +400,39 @@ class RentalAgreementDocumentApiTest extends TestCase
             'document_type' => 'rental_agreement_contract',
         ]);
 
-        DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Noch nicht erinnern',
-            'status' => DocumentReminder::STATUS_PENDING,
+            'status' => Reminder::STATUS_PENDING,
             'remind_at' => '2026-06-15T10:00:00+00:00',
             'due_at' => '2026-06-20T10:00:00+00:00',
         ]);
-        DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Jetzt erinnern',
-            'status' => DocumentReminder::STATUS_PENDING,
+            'status' => Reminder::STATUS_PENDING,
             'remind_at' => '2026-06-10T10:00:00+00:00',
             'due_at' => '2026-06-20T10:00:00+00:00',
         ]);
-        DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Versaeumt',
-            'status' => DocumentReminder::STATUS_PENDING,
+            'status' => Reminder::STATUS_PENDING,
             'remind_at' => '2026-06-01T10:00:00+00:00',
             'due_at' => '2026-06-10T10:00:00+00:00',
         ]);
-        DocumentReminder::factory()->done()->create([
-            'document_id' => $document->id,
+        Reminder::factory()->done()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Erledigt',
             'due_at' => '2026-06-10T10:00:00+00:00',
         ]);
-        DocumentReminder::factory()->cancelled()->create([
-            'document_id' => $document->id,
+        Reminder::factory()->cancelled()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Abgebrochen',
             'due_at' => '2026-06-10T10:00:00+00:00',
         ]);
@@ -352,15 +445,15 @@ class RentalAgreementDocumentApiTest extends TestCase
 
             $reminders = collect($response->json('data'))->keyBy('title');
 
-            $this->assertSame(DocumentReminder::DISPLAY_STATUS_OPEN, $reminders['Noch nicht erinnern']['display_status']);
-            $this->assertSame(DocumentReminder::DISPLAY_STATUS_REMINDER_DUE, $reminders['Jetzt erinnern']['display_status']);
-            $this->assertSame(DocumentReminder::DISPLAY_STATUS_OVERDUE, $reminders['Versaeumt']['display_status']);
-            $this->assertSame(DocumentReminder::STATUS_DONE, $reminders['Erledigt']['display_status']);
-            $this->assertSame(DocumentReminder::STATUS_CANCELLED, $reminders['Abgebrochen']['display_status']);
+            $this->assertSame(Reminder::DISPLAY_STATUS_OPEN, $reminders['Noch nicht erinnern']['display_status']);
+            $this->assertSame(Reminder::DISPLAY_STATUS_REMINDER_DUE, $reminders['Jetzt erinnern']['display_status']);
+            $this->assertSame(Reminder::DISPLAY_STATUS_OVERDUE, $reminders['Versaeumt']['display_status']);
+            $this->assertSame(Reminder::STATUS_DONE, $reminders['Erledigt']['display_status']);
+            $this->assertSame(Reminder::STATUS_CANCELLED, $reminders['Abgebrochen']['display_status']);
         });
     }
 
-    public function test_tenant_can_view_but_not_create_document_reminders_for_own_rental_agreement(): void
+    public function test_tenant_can_view_but_not_create_reminders_for_own_rental_agreement(): void
     {
         $user = User::factory()->create();
         $user->assignRole(RoleName::Tenant->value);
@@ -373,13 +466,15 @@ class RentalAgreementDocumentApiTest extends TestCase
             'document_type' => 'rental_agreement_contract',
             'status' => Document::STATUS_SHARED,
         ]);
-        $reminder = DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        $reminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Unterschrift fällig',
             'assigned_to_id' => $user->id,
         ]);
-        $landlordReminder = DocumentReminder::factory()->create([
-            'document_id' => $document->id,
+        $landlordReminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
             'title' => 'Interne Wiedervorlage',
         ]);
 
@@ -411,8 +506,8 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($user, 'sanctum')
-            ->patchJson('/api/document-reminders/'.$reminder->id, [
-                'status' => DocumentReminder::STATUS_DONE,
+            ->patchJson('/api/reminders/'.$reminder->id, [
+                'status' => Reminder::STATUS_DONE,
             ])
             ->assertForbidden();
     }
@@ -551,7 +646,7 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.actions.create_reminder', true);
     }
 
-    public function test_document_reminder_validates_reminder_before_due_date(): void
+    public function test_reminder_validates_reminder_before_due_date(): void
     {
         $user = User::factory()->create();
         $user->assignRole(RoleName::Landlord->value);

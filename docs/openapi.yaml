@@ -1540,6 +1540,83 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
+  /rental-agreements/{rentalAgreement}/reminders:
+    parameters:
+      - name: rentalAgreement
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Reminders]
+      summary: Erinnerungen eines Mietvertrags auflisten
+      description: |
+        Listet Aufgaben und Erinnerungen direkt am Mietvertrag, z. B.
+        "Kautionseingang pruefen". Es gilt dieselbe Leseberechtigung wie bei
+        `GET /rental-agreements/{rentalAgreement}`.
+
+        `tenant` erhält nur Reminder, die ihm selbst über `assigned_to_id`
+        zugewiesen sind.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Reminders]
+      summary: Erinnerung am Mietvertrag anlegen
+      description: |
+        Legt eine neue Erinnerung im Status `pending` direkt am Mietvertrag an.
+        Erlaubt für `admin` oder den zugeordneten `landlord`, der den
+        Mietvertrag bearbeiten darf.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreReminderRequest'
+      responses:
+        '201':
+          description: Erinnerung angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Reminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
   /payments/{payment}:
     parameters:
       - name: payment
@@ -2518,6 +2595,83 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /payments/{payment}/reminders:
+    parameters:
+      - name: payment
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Reminders]
+      summary: Erinnerungen einer Zahlung auflisten
+      description: |
+        Listet Aufgaben und Erinnerungen direkt an einer Zahlung, z. B.
+        "Zahlungseingang kontrollieren". Es gilt dieselbe Leseberechtigung wie
+        bei `GET /payments/{payment}`.
+
+        `tenant` erhält nur Reminder, die ihm selbst über `assigned_to_id`
+        zugewiesen sind.
+      security:
+        - sanctumBearer: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Reminders]
+      summary: Erinnerung an einer Zahlung anlegen
+      description: |
+        Legt eine neue Erinnerung im Status `pending` direkt an einer Zahlung
+        an. Erlaubt für `admin` oder den `landlord`, der die zugehörige Zahlung
+        bearbeiten darf.
+      security:
+        - sanctumBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreReminderRequest'
+      responses:
+        '201':
+          description: Erinnerung angelegt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Reminder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
   /documents/{document}/reminders:
     parameters:
       - name: document
@@ -2526,7 +2680,7 @@ paths:
         schema:
           type: integer
     get:
-      tags: [Documents]
+      tags: [Reminders]
       summary: Dokument-Aufgaben und Erinnerungen auflisten
       description: |
         Listet Reminder zur Dokumentakte, z. B. fehlende Unterschrift oder
@@ -2549,7 +2703,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/DocumentReminder'
+                      $ref: '#/components/schemas/Reminder'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2557,7 +2711,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: [Documents]
+      tags: [Reminders]
       summary: Dokument-Aufgabe oder Erinnerung anlegen
       description: |
         Legt eine neue Erinnerung im Status `pending` an. Erlaubt für `admin`
@@ -2570,7 +2724,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/StoreDocumentReminderRequest'
+              $ref: '#/components/schemas/StoreReminderRequest'
       responses:
         '201':
           description: Erinnerung angelegt
@@ -2581,7 +2735,7 @@ paths:
                 required: [data]
                 properties:
                   data:
-                    $ref: '#/components/schemas/DocumentReminder'
+                    $ref: '#/components/schemas/Reminder'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2595,15 +2749,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /document-reminders/{documentReminder}:
+  /reminders/{reminder}:
     parameters:
-      - name: documentReminder
+      - name: reminder
         in: path
         required: true
         schema:
           type: integer
     patch:
-      tags: [Documents]
+      tags: [Reminders]
       summary: Dokument-Aufgabe oder Erinnerung aktualisieren
       description: |
         Aktualisiert Titel, Notizen, Fälligkeit, Erinnerungszeit, Zuweisung,
@@ -2616,7 +2770,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateDocumentReminderRequest'
+              $ref: '#/components/schemas/UpdateReminderRequest'
       responses:
         '200':
           description: Erinnerung aktualisiert
@@ -2627,7 +2781,7 @@ paths:
                 required: [data]
                 properties:
                   data:
-                    $ref: '#/components/schemas/DocumentReminder'
+                    $ref: '#/components/schemas/Reminder'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2641,7 +2795,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
     delete:
-      tags: [Documents]
+      tags: [Reminders]
       summary: Dokument-Aufgabe oder Erinnerung löschen
       security:
         - sanctumBearer: []
@@ -3624,7 +3778,7 @@ components:
         `true` bedeutet, dass die Aktion fuer den authentifizierten Benutzer
         fachlich angeboten werden kann; serverseitige Validierung bleibt
         weiterhin massgeblich.
-      required: [update, delete, create_document, create_payment]
+      required: [update, delete, create_document, create_payment, create_reminder]
       properties:
         update:
           type: boolean
@@ -3633,6 +3787,8 @@ components:
         create_document:
           type: boolean
         create_payment:
+          type: boolean
+        create_reminder:
           type: boolean
 
     StoreRentalAgreementRequest:
@@ -3759,7 +3915,7 @@ components:
 
     Payment:
       type: object
-      required: [id, payable_type, payable_id, type, direction, status, amount, currency, created_at, updated_at]
+      required: [id, payable_type, payable_id, type, direction, status, amount, currency, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -3816,12 +3972,26 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+        actions:
+          $ref: '#/components/schemas/PaymentActions'
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    PaymentActions:
+      type: object
+      description: Frontend-Hinweise fuer Zahlungsbuttons.
+      required: [update, delete, create_reminder]
+      properties:
+        update:
+          type: boolean
+        delete:
+          type: boolean
+        create_reminder:
+          type: boolean
 
     DocumentTemplate:
       type: object
@@ -4119,14 +4289,19 @@ components:
           type: string
           format: date-time
 
-    DocumentReminder:
+    Reminder:
       type: object
-      required: [id, document_id, title, due_at, status, display_status, actions, created_at, updated_at]
+      required: [id, remindable_type, remindable_id, title, due_at, status, display_status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
-        document_id:
+        remindable_type:
+          type: string
+          enum: [Document, RentalAgreement, Payment]
+          description: Oberflächenname des Vorgangs, an dem die Erinnerung hängt.
+        remindable_id:
           type: integer
+          description: ID des Vorgangs, an dem die Erinnerung hängt.
         title:
           type: string
         notes:
@@ -4184,7 +4359,7 @@ components:
           format: date-time
           nullable: true
         actions:
-          $ref: '#/components/schemas/DocumentReminderActions'
+          $ref: '#/components/schemas/ReminderActions'
         created_at:
           type: string
           format: date-time
@@ -4192,7 +4367,7 @@ components:
           type: string
           format: date-time
 
-    DocumentReminderActions:
+    ReminderActions:
       type: object
       description: |
         Frontend-Hinweise fuer Reminder-Buttons. `true` bedeutet, dass die
@@ -4254,7 +4429,7 @@ components:
             Für `tenant` nur die eigenen zugewiesenen Reminder.
           type: array
           items:
-            $ref: '#/components/schemas/DocumentReminder'
+            $ref: '#/components/schemas/Reminder'
         created_by_id:
           type: integer
           nullable: true
@@ -4663,7 +4838,7 @@ components:
           nullable: true
           additionalProperties: true
 
-    StoreDocumentReminderRequest:
+    StoreReminderRequest:
       type: object
       required: [title, due_at]
       properties:
@@ -4694,7 +4869,7 @@ components:
           nullable: true
           additionalProperties: true
 
-    UpdateDocumentReminderRequest:
+    UpdateReminderRequest:
       type: object
       properties:
         title:

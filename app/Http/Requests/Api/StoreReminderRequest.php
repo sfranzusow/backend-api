@@ -2,20 +2,20 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Document;
-use App\Models\DocumentReminder;
+use App\Models\Reminder;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreDocumentReminderRequest extends FormRequest
+class StoreReminderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var Document $document */
-        $document = $this->route('document');
+        $remindable = $this->remindable();
 
-        return $this->user()?->can('createForDocument', [DocumentReminder::class, $document]) ?? false;
+        return $remindable instanceof Model
+            && ($this->user()?->can('createForRemindable', [Reminder::class, $remindable]) ?? false);
     }
 
     /**
@@ -31,5 +31,18 @@ class StoreDocumentReminderRequest extends FormRequest
             'assigned_to_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'metadata' => ['nullable', 'array'],
         ];
+    }
+
+    public function remindable(): ?Model
+    {
+        foreach (['document', 'rental_agreement', 'payment'] as $routeParameter) {
+            $remindable = $this->route($routeParameter);
+
+            if ($remindable instanceof Model) {
+                return $remindable;
+            }
+        }
+
+        return null;
     }
 }

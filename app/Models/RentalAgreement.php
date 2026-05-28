@@ -108,4 +108,11 @@ class RentalAgreement extends Model
             ->orderBy('due_date')
             ->orderBy('id');
     }
+
+    public function reminders(): MorphMany
+    {
+        return $this->morphMany(Reminder::class, 'remindable')
+            ->orderBy('due_at')
+            ->orderBy('id');
+    }
 }

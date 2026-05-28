@@ -3,26 +3,27 @@
 namespace Database\Factories;
 
 use App\Models\Document;
-use App\Models\DocumentReminder;
+use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<DocumentReminder>
+ * @extends Factory<Reminder>
  */
-class DocumentReminderFactory extends Factory
+class ReminderFactory extends Factory
 {
     public function definition(): array
     {
         $dueAt = fake()->dateTimeBetween('+1 day', '+30 days');
 
         return [
-            'document_id' => Document::factory(),
+            'remindable_type' => Document::class,
+            'remindable_id' => Document::factory(),
             'title' => fake()->sentence(3),
             'notes' => fake()->optional()->sentence(),
             'due_at' => $dueAt,
             'remind_at' => fake()->optional()->dateTimeBetween('now', $dueAt),
-            'status' => DocumentReminder::STATUS_PENDING,
+            'status' => Reminder::STATUS_PENDING,
             'metadata' => [
                 'source' => 'factory',
             ],
@@ -35,7 +36,7 @@ class DocumentReminderFactory extends Factory
     public function done(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'status' => DocumentReminder::STATUS_DONE,
+            'status' => Reminder::STATUS_DONE,
             'completed_at' => now(),
         ]);
     }
@@ -43,7 +44,7 @@ class DocumentReminderFactory extends Factory
     public function cancelled(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'status' => DocumentReminder::STATUS_CANCELLED,
+            'status' => Reminder::STATUS_CANCELLED,
             'completed_at' => null,
         ]);
     }

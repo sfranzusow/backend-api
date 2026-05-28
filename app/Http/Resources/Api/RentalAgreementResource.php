@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api;
 use App\Enums\RoleName;
 use App\Models\Document;
 use App\Models\Payment;
+use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -72,6 +73,7 @@ class RentalAgreementResource extends JsonResource
                 'delete' => false,
                 'create_document' => false,
                 'create_payment' => false,
+                'create_reminder' => false,
             ];
         }
 
@@ -80,6 +82,7 @@ class RentalAgreementResource extends JsonResource
             'delete' => $authUser->can('delete', $rentalAgreement),
             'create_document' => $authUser->can('createForRentalAgreement', [Document::class, $rentalAgreement]),
             'create_payment' => $authUser->can('createForRentalAgreement', [Payment::class, $rentalAgreement]),
+            'create_reminder' => $authUser->can('createForRemindable', [Reminder::class, $rentalAgreement]),
         ];
     }
 }

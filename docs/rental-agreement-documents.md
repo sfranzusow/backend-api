@@ -55,7 +55,8 @@ Zusatzlich soll es generische Dokument-Konzepte geben:
 - `Document`: konkrete Dokumentakte zu einem fachlichen Objekt
 - `DocumentVersion`: konkrete erzeugte Version, z. B. ein PDF-Snapshot
 - `DocumentFile`: gespeicherte Datei, z. B. Original-PDF oder unterschriebener Upload
-- `DocumentReminder`: Frist oder Wiedervorlage zu einer Dokumentakte
+- `Reminder`: generische Aufgabe/Erinnerung an einem Vorgang, z. B. Dokument,
+  Mietvertrag oder Zahlung
 
 Ein Mietvertragsdokument ist dann nur ein Spezialfall:
 
@@ -74,8 +75,9 @@ Version eingefroren.
 Implementiert ist die generische Datenbasis im bestehenden Laravel-Projekt
 inklusive HTTP-Endpunkten fuer Dokument-Metadaten, PDF-Erzeugung, Download und
 Upload/Download unterschriebener Dokumentdateien. Dokumente koennen ausserdem
-freigegeben oder verworfen werden. Fristen und Erinnerungen koennen an eine
-Dokumentakte gehaengt werden. Die technische API ist in `openapi.yaml`
+freigegeben oder verworfen werden. Fristen und Erinnerungen koennen an ein
+Dokument, einen Mietvertrag oder eine Zahlung gehaengt werden. Die technische
+API ist in `openapi.yaml`
 dokumentiert.
 
 Angelegt sind:
@@ -93,8 +95,9 @@ Angelegt sind:
   Seitenzahlsteuerung, Status, Version und Platzhaltern
 - `document_files`: Storage-Metadaten fuer Dateien einer Dokumentversion,
   z. B. erzeugtes PDF, unterschriebener Upload oder Anhang
-- `document_reminders`: Fristen/Wiedervorlagen mit `due_at`, optionalem
-  `remind_at`, Status, Zuweisung und Metadaten
+- `reminders`: polymorphe Aufgaben/Erinnerungen mit `remindable_type`,
+  `remindable_id`, `due_at`, optionalem `remind_at`, Status, Zuweisung und
+  Metadaten
 
 `RentalAgreement` hat eine polymorphe `documents`-Relation. Dadurch kann ein
 Mietvertrag Dokumente bekommen, ohne PDF-Pfade oder Dokument-Interna direkt im
@@ -116,10 +119,14 @@ Aktuell implementierte Endpunkte:
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
-- `GET /documents/{document}/reminders`: Fristen/Erinnerungen listen
-- `POST /documents/{document}/reminders`: Frist/Erinnerung anlegen
-- `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
-- `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
+- `GET /documents/{document}/reminders`: Aufgaben/Erinnerungen eines Dokuments listen
+- `POST /documents/{document}/reminders`: Aufgabe/Erinnerung am Dokument anlegen
+- `GET /rental-agreements/{rentalAgreement}/reminders`: Aufgaben/Erinnerungen eines Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
+- `GET /payments/{payment}/reminders`: Aufgaben/Erinnerungen einer Zahlung listen
+- `POST /payments/{payment}/reminders`: Aufgabe/Erinnerung an einer Zahlung anlegen
+- `PATCH /reminders/{reminder}`: Frist/Erinnerung aktualisieren
+- `DELETE /reminders/{reminder}`: Frist/Erinnerung loeschen
 
 Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
 
@@ -132,7 +139,7 @@ Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
 - Mieter duerfen erzeugte PDFs erst nach Freigabe herunterladen.
 - Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
 - Reminder werden fuer Mieter auf eigene `assigned_to_id`-Zuweisungen
-  reduziert; interne Vermieter-Wiedervorlagen werden nicht ausgeliefert.
+  reduziert; interne Vermieter-Erinnerungen werden nicht ausgeliefert.
 - Dokument-Responses enthalten `actions` fuer Frontend-Buttons:
   `generate`, `share`, `void`, `download`, `upload_signed`,
   `download_signed` und `create_reminder`.
@@ -181,7 +188,7 @@ Geplante Kernverantwortungen:
 - `DocumentFile`: konkrete Dateien im Storage
 - `DocumentGenerator`: erzeugt Dokumentversionen aus Vorlage und Daten
 - `DocumentRenderer`: rendert HTML/PDF aus Snapshot-Daten
-- `DocumentReminder`: haelt Fristen und Wiedervorlagen an der Dokumentakte
+- `Reminder`: haelt Fristen und Erinnerungen an Dokumenten, Mietvertraegen oder Zahlungen
 
 Die Rental-Agreement-Seite sollte nur eine klare Schnittstelle nutzen. Die
 Workflow-Logik fuer Erzeugen, Freigeben, Verwerfen und Upload liegt im
@@ -424,8 +431,12 @@ implementiert.
 - `GET /documents/{document}/signed-download`: implementiert fuer unterschriebene Uploads
 - `GET /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `POST /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
-- `PATCH /document-reminders/{documentReminder}`: implementiert fuer Fristen/Erinnerungen
-- `DELETE /document-reminders/{documentReminder}`: implementiert fuer Fristen/Erinnerungen
+- `GET /rental-agreements/{rentalAgreement}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `POST /rental-agreements/{rentalAgreement}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `GET /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `POST /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `PATCH /reminders/{reminder}`: implementiert fuer Fristen/Erinnerungen
+- `DELETE /reminders/{reminder}`: implementiert fuer Fristen/Erinnerungen
 
 Fuer eine HTML-Vorschau kann spaeter zusaetzlich ein Preview-Endpunkt sinnvoll
 sein:
@@ -493,7 +504,7 @@ Die ersten Backend-Schritte sind umgesetzt:
 7. PDF-Snapshot per API erzeugen und herunterladen.
 8. Unterschriebene Datei hochladen und herunterladen.
 9. Dokumentworkflow fuer Freigabe, Verwerfen und Statusuebergaenge schaerfen.
-10. Fristen/Erinnerungen an Dokumentakten modellieren und per API verwalten.
+10. Fristen/Erinnerungen an Dokumenten, Mietvertraegen und Zahlungen modellieren und per API verwalten.
 11. Admin-API fuer Dokumentvorlagen anlegen, bearbeiten, aktivieren, archivieren
     und loeschen.
 12. Header-/Footer-Layouts fuer Organisationen und Vermieter modellieren,
@@ -598,7 +609,7 @@ erinnerbar sein.
 
 Umgesetzt:
 
-- `DocumentReminder` als generisches Reminder-Modell an der Dokumentakte
+- `Reminder` als generisches Reminder-Modell an Dokument, Mietvertrag oder Zahlung
 - Felder fuer Titel, Notizen, `due_at`, optionales `remind_at`, Status,
   Zuweisung, Metadaten und Abschlusszeitpunkt
 - API zum Listen, Anlegen, Aktualisieren und Loeschen
@@ -638,7 +649,8 @@ Umgesetzt:
   Dokumentabruf keinen Zugriff.
 - Mieter duerfen erzeugte PDFs erst nach Freigabe herunterladen.
 - Mieter duerfen eine unterschriebene Datei nur bei `shared` hochladen.
-- Mieter sehen bei Dokument-Remindern nur eigene `assigned_to_id`-Zuweisungen.
+- Mieter sehen bei Remindern nur eigene `assigned_to_id`-Zuweisungen an
+  Vorgaengen, die fuer sie sichtbar sind.
 - Vermieter- und Admin-Sichten bleiben vollstaendige Arbeitsakten.
 - Reine Mieter-Sichten bekommen keine internen Template-, Snapshot-, Storage-
   oder Creator-Felder in Dokument-, Versions- und File-Responses.

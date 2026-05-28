@@ -14,7 +14,8 @@ Die API verwaltet eine kleine Immobilien-Domaene mit diesen Kernobjekten:
 - `properties`: Immobilien bzw. Einheiten
 - `property_user`: Zuordnung von Benutzern zu Objekten mit Rollen wie `landlord`, `tenant`, `manager`
 - `rental_agreements`: echte Mietvertraege zwischen Vermieter und Mieter
-- `document_templates`, `documents`, `document_versions`, `document_files`, `document_reminders`: interne Documents-Datenbasis fuer Vertragsdokumente, Dateien und Fristen
+- `document_templates`, `documents`, `document_versions`, `document_files`: interne Documents-Datenbasis fuer Vertragsdokumente und Dateien
+- `reminders`: generische Aufgaben/Erinnerungen an Dokumenten, Mietvertraegen oder Zahlungen
 - `payments`: generische Zahlungen/Forderungen, z. B. Miete, Kaution und Kautionsrueckzahlung
 
 Wichtig ist die Trennung zwischen:
@@ -246,10 +247,14 @@ heruntergeladen werden.
 - `GET /documents/{document}/download`: aktuell erzeugtes PDF herunterladen
 - `POST /documents/{document}/signed-upload`: unterschriebene Datei hochladen
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
-- `GET /documents/{document}/reminders`: Fristen/Erinnerungen eines Dokuments listen
-- `POST /documents/{document}/reminders`: Frist/Erinnerung anlegen
-- `PATCH /document-reminders/{documentReminder}`: Frist/Erinnerung aktualisieren
-- `DELETE /document-reminders/{documentReminder}`: Frist/Erinnerung loeschen
+- `GET /documents/{document}/reminders`: Aufgaben/Erinnerungen eines Dokuments listen
+- `POST /documents/{document}/reminders`: Aufgabe/Erinnerung am Dokument anlegen
+- `GET /rental-agreements/{rentalAgreement}/reminders`: Aufgaben/Erinnerungen eines Mietvertrags listen
+- `POST /rental-agreements/{rentalAgreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
+- `GET /payments/{payment}/reminders`: Aufgaben/Erinnerungen einer Zahlung listen
+- `POST /payments/{payment}/reminders`: Aufgabe/Erinnerung an einer Zahlung anlegen
+- `PATCH /reminders/{reminder}`: Frist/Erinnerung aktualisieren
+- `DELETE /reminders/{reminder}`: Frist/Erinnerung loeschen
 
 Bei Vorlagen gilt:
 
@@ -326,12 +331,14 @@ Beim Upload gilt:
 
 Bei Fristen und Erinnerungen gilt:
 
-- Reminder gehoeren zu einer `Document`-Akte, nicht direkt zum Mietvertrag
-- ein Reminder hat `title`, `due_at`, optional `remind_at`, `assigned_to_id`, `metadata` und Status
+- Reminder sind generische Aufgaben/Erinnerungen und koennen aktuell an `Document`, `RentalAgreement` oder `Payment` haengen
+- `remindable_type` und `remindable_id` zeigen, an welchem Vorgang der Reminder haengt
+- ein Reminder hat `title`, `due_at` ("Faellig am"), optional `remind_at` ("Erinnern am"), `assigned_to_id`, `metadata` und Status
 - erlaubte Reminder-Status sind `pending`, `done`, `cancelled`
+- `display_status` ist fuer Frontend-Badges abgeleitet: `open`, `reminder_due`, `overdue`, `done`, `cancelled`
 - beim Wechsel auf `done` setzt der Server `completed_at`, wenn kein eigener Wert uebergeben wird
-- `tenant` darf nur eigene, ueber `assigned_to_id` zugewiesene Erinnerungen bei
-  sichtbaren Dokumenten sehen, aber nicht anlegen, aendern oder loeschen
+- `tenant` darf nur eigene, ueber `assigned_to_id` zugewiesene Erinnerungen an
+  fuer ihn sichtbaren Vorgaengen sehen, aber nicht anlegen, aendern oder loeschen
 
 Berechtigungen:
 
@@ -428,7 +435,7 @@ Einschraenkungen:
 - Dokumentlisten fuer `tenant` enthalten nur `shared` und `signed_uploaded`; das
   Frontend sollte `generated` nicht als Mieter-verfuegbar interpretieren
 - Reminder in Tenant-Responses sind eine persoenliche Aufgaben-/Hinweisliste,
-  keine vollstaendige Vermieter-Wiedervorlage
+  keine vollstaendige Vermieter-Erinnerung
 - Dokument-Responses enthalten `actions` als Button-Hinweise fuer das Frontend.
   Reine `tenant`-Sichten bekommen keine internen Template-, Snapshot-, Storage-
   oder Creator-Felder.
