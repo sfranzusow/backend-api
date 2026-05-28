@@ -24,7 +24,7 @@ class DocumentReminderController extends Controller
             && ! $authUser->hasRole(RoleName::Landlord->value);
 
         $reminders = $document->reminders()
-            ->with(['creator:id,name,email', 'assignee:id,name,email'])
+            ->with(['document.documentable', 'creator:id,name,email', 'assignee:id,name,email'])
             ->when($limitToAssignedTenant, function ($query) use ($authUser) {
                 $query->where('assigned_to_id', $authUser->id);
             })
@@ -43,7 +43,7 @@ class DocumentReminderController extends Controller
             'created_by_id' => $request->user()?->id,
         ]);
 
-        $reminder->load(['creator:id,name,email', 'assignee:id,name,email']);
+        $reminder->load(['document.documentable', 'creator:id,name,email', 'assignee:id,name,email']);
 
         return response()->json([
             'data' => new DocumentReminderResource($reminder),
@@ -61,7 +61,7 @@ class DocumentReminderController extends Controller
         }
 
         $documentReminder->forceFill($validated)->save();
-        $documentReminder->load(['creator:id,name,email', 'assignee:id,name,email']);
+        $documentReminder->load(['document.documentable', 'creator:id,name,email', 'assignee:id,name,email']);
 
         return response()->json([
             'data' => new DocumentReminderResource($documentReminder),

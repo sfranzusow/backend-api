@@ -227,7 +227,10 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.status', DocumentReminder::STATUS_PENDING)
             ->assertJsonPath('data.assigned_to_id', $tenant->id)
             ->assertJsonPath('data.created_by_id', $user->id)
-            ->assertJsonPath('data.metadata.channel', 'email');
+            ->assertJsonPath('data.metadata.channel', 'email')
+            ->assertJsonPath('data.actions.update', true)
+            ->assertJsonPath('data.actions.delete', true)
+            ->assertJsonPath('data.actions.mark_done', true);
 
         $reminderId = $response->json('data.id');
 
@@ -244,14 +247,20 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->getJson('/api/documents/'.$document->id.'/reminders')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $reminderId);
+            ->assertJsonPath('data.0.id', $reminderId)
+            ->assertJsonPath('data.0.actions.update', true)
+            ->assertJsonPath('data.0.actions.delete', true)
+            ->assertJsonPath('data.0.actions.mark_done', true);
 
         $this->actingAs($user, 'sanctum')
             ->patchJson('/api/document-reminders/'.$reminderId, [
                 'status' => DocumentReminder::STATUS_DONE,
             ])
             ->assertOk()
-            ->assertJsonPath('data.status', DocumentReminder::STATUS_DONE);
+            ->assertJsonPath('data.status', DocumentReminder::STATUS_DONE)
+            ->assertJsonPath('data.actions.update', true)
+            ->assertJsonPath('data.actions.delete', true)
+            ->assertJsonPath('data.actions.mark_done', false);
 
         $this->assertDatabaseHas('document_reminders', [
             'id' => $reminderId,
@@ -266,6 +275,26 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->assertDatabaseMissing('document_reminders', [
             'id' => $reminderId,
         ]);
+    }
+
+    public function test_admin_reminder_response_exposes_management_actions(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Admin->value);
+        $document = Document::factory()->create();
+        $reminder = DocumentReminder::factory()->create([
+            'document_id' => $document->id,
+            'status' => DocumentReminder::STATUS_PENDING,
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id.'/reminders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $reminder->id)
+            ->assertJsonPath('data.0.actions.update', true)
+            ->assertJsonPath('data.0.actions.delete', true)
+            ->assertJsonPath('data.0.actions.mark_done', true);
     }
 
     public function test_tenant_can_view_but_not_create_document_reminders_for_own_rental_agreement(): void
@@ -296,6 +325,9 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $reminder->id)
+            ->assertJsonPath('data.0.actions.update', false)
+            ->assertJsonPath('data.0.actions.delete', false)
+            ->assertJsonPath('data.0.actions.mark_done', false)
             ->assertJsonMissing(['title' => $landlordReminder->title]);
 
         $this->actingAs($user, 'sanctum')
@@ -303,6 +335,9 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data.reminders')
             ->assertJsonPath('data.reminders.0.id', $reminder->id)
+            ->assertJsonPath('data.reminders.0.actions.update', false)
+            ->assertJsonPath('data.reminders.0.actions.delete', false)
+            ->assertJsonPath('data.reminders.0.actions.mark_done', false)
             ->assertJsonMissing(['title' => $landlordReminder->title]);
 
         $this->actingAs($user, 'sanctum')

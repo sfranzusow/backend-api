@@ -4121,7 +4121,7 @@ components:
 
     DocumentReminder:
       type: object
-      required: [id, document_id, title, due_at, status, created_at, updated_at]
+      required: [id, document_id, title, due_at, status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -4164,12 +4164,32 @@ components:
           type: string
           format: date-time
           nullable: true
+        actions:
+          $ref: '#/components/schemas/DocumentReminderActions'
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    DocumentReminderActions:
+      type: object
+      description: |
+        Frontend-Hinweise fuer Reminder-Buttons. `true` bedeutet, dass die
+        Aktion fuer den authentifizierten Benutzer fachlich angeboten werden
+        kann; der jeweilige Endpunkt prueft weiterhin serverseitig.
+      required: [update, delete, mark_done]
+      properties:
+        update:
+          type: boolean
+          description: Reminder bearbeiten, z. B. Titel, Faelligkeit oder Zuweisung.
+        delete:
+          type: boolean
+          description: Reminder loeschen.
+        mark_done:
+          type: boolean
+          description: Pending-Reminder als erledigt markieren.
 
     Document:
       type: object

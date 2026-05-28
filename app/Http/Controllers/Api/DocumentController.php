@@ -147,7 +147,7 @@ class DocumentController extends Controller
             ...self::BASE_RESPONSE_RELATIONS,
             'reminders' => function ($query) use ($authUser, $limitToAssignedTenant): void {
                 $query
-                    ->with(['creator:id,name,email', 'assignee:id,name,email'])
+                    ->with(['document.documentable', 'creator:id,name,email', 'assignee:id,name,email'])
                     ->when($limitToAssignedTenant, function ($query) use ($authUser): void {
                         $query->where('assigned_to_id', $authUser->id);
                     });

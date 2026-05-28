@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Models\DocumentReminder;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -28,8 +30,42 @@ class DocumentReminderResource extends JsonResource
             'created_by_id' => $this->created_by_id,
             'creator' => UserResource::make($this->whenLoaded('creator')),
             'completed_at' => $this->completed_at?->toISOString(),
+            'actions' => $this->actions($request),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function actions(Request $request): array
+    {
+        $authUser = $request->user();
+        $documentReminder = $this->resource;
+
+        if (! $authUser instanceof User || ! $documentReminder instanceof DocumentReminder) {
+            return $this->emptyActions();
+        }
+
+        $canUpdate = $authUser->can('update', $documentReminder);
+
+        return [
+            'update' => $canUpdate,
+            'delete' => $authUser->can('delete', $documentReminder),
+            'mark_done' => $canUpdate && $documentReminder->status === DocumentReminder::STATUS_PENDING,
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function emptyActions(): array
+    {
+        return [
+            'update' => false,
+            'delete' => false,
+            'mark_done' => false,
         ];
     }
 }
