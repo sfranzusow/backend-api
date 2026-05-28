@@ -55,8 +55,27 @@ class RentalAgreementDocumentApiTest extends TestCase
         $this->getJson('/api/documents/'.$document->id.'/signed-download')->assertUnauthorized();
         $this->getJson('/api/documents/'.$document->id.'/reminders')->assertUnauthorized();
         $this->postJson('/api/documents/'.$document->id.'/reminders')->assertUnauthorized();
+        $this->getJson('/api/reminders')->assertUnauthorized();
+        $this->getJson('/api/reminders/summary')->assertUnauthorized();
         $this->patchJson('/api/reminders/'.$reminder->id)->assertUnauthorized();
         $this->deleteJson('/api/reminders/'.$reminder->id)->assertUnauthorized();
+    }
+
+    public function test_legacy_document_reminder_update_and_delete_routes_are_not_registered(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Admin->value);
+        $reminder = Reminder::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/document-reminders/'.$reminder->id, [
+                'status' => Reminder::STATUS_DONE,
+            ])
+            ->assertNotFound();
+
+        $this->actingAs($user, 'sanctum')
+            ->deleteJson('/api/document-reminders/'.$reminder->id)
+            ->assertNotFound();
     }
 
     public function test_landlord_can_create_document_for_own_rental_agreement(): void
@@ -450,6 +469,132 @@ class RentalAgreementDocumentApiTest extends TestCase
             $this->assertSame(Reminder::DISPLAY_STATUS_OVERDUE, $reminders['Versaeumt']['display_status']);
             $this->assertSame(Reminder::STATUS_DONE, $reminders['Erledigt']['display_status']);
             $this->assertSame(Reminder::STATUS_CANCELLED, $reminders['Abgebrochen']['display_status']);
+        });
+    }
+
+    public function test_user_can_view_assigned_reminder_summary_grouped_for_dashboard(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+        ]);
+        $payment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+        ]);
+        $otherUser = User::factory()->create();
+
+        Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Dokument erinnern',
+            'status' => Reminder::STATUS_PENDING,
+            'remind_at' => '2026-06-10T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+        Reminder::factory()->create([
+            'remindable_type' => RentalAgreement::class,
+            'remindable_id' => $agreement->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Vertrag faellig',
+            'status' => Reminder::STATUS_PENDING,
+            'remind_at' => '2026-06-01T10:00:00+00:00',
+            'due_at' => '2026-06-10T10:00:00+00:00',
+        ]);
+        Reminder::factory()->create([
+            'remindable_type' => Payment::class,
+            'remindable_id' => $payment->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Zahlung offen',
+            'status' => Reminder::STATUS_PENDING,
+            'remind_at' => '2026-06-15T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+        Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'assigned_to_id' => $otherUser->id,
+            'title' => 'Fremde Erinnerung',
+            'status' => Reminder::STATUS_PENDING,
+            'due_at' => '2026-06-10T10:00:00+00:00',
+        ]);
+
+        $this->travelTo('2026-06-12T10:00:00+00:00', function () use ($user): void {
+            $this->actingAs($user, 'sanctum')
+                ->getJson('/api/reminders/summary')
+                ->assertOk()
+                ->assertJsonPath('data.total', 3)
+                ->assertJsonPath('data.by_display_status.open', 1)
+                ->assertJsonPath('data.by_display_status.reminder_due', 1)
+                ->assertJsonPath('data.by_display_status.overdue', 1)
+                ->assertJsonPath('data.by_display_status.done', 0)
+                ->assertJsonPath('data.by_display_status.cancelled', 0)
+                ->assertJsonPath('data.by_remindable_type.Document.total', 1)
+                ->assertJsonPath('data.by_remindable_type.Document.reminder_due', 1)
+                ->assertJsonPath('data.by_remindable_type.RentalAgreement.total', 1)
+                ->assertJsonPath('data.by_remindable_type.RentalAgreement.overdue', 1)
+                ->assertJsonPath('data.by_remindable_type.Payment.total', 1)
+                ->assertJsonPath('data.by_remindable_type.Payment.open', 1);
+        });
+    }
+
+    public function test_user_can_filter_assigned_reminders_for_dashboard_list(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $agreement = RentalAgreement::factory()->create([
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+        ]);
+        $document = Document::factory()->create([
+            'documentable_type' => RentalAgreement::class,
+            'documentable_id' => $agreement->id,
+            'document_type' => 'rental_agreement_contract',
+        ]);
+        $payment = Payment::factory()->create([
+            'payable_type' => RentalAgreement::class,
+            'payable_id' => $agreement->id,
+        ]);
+        $documentReminder = Reminder::factory()->create([
+            'remindable_type' => Document::class,
+            'remindable_id' => $document->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Dokument offen',
+            'status' => Reminder::STATUS_PENDING,
+            'remind_at' => '2026-06-15T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+        $paymentReminder = Reminder::factory()->create([
+            'remindable_type' => Payment::class,
+            'remindable_id' => $payment->id,
+            'assigned_to_id' => $user->id,
+            'title' => 'Zahlung erinnern',
+            'status' => Reminder::STATUS_PENDING,
+            'remind_at' => '2026-06-10T10:00:00+00:00',
+            'due_at' => '2026-06-20T10:00:00+00:00',
+        ]);
+
+        $this->travelTo('2026-06-12T10:00:00+00:00', function () use ($user, $paymentReminder, $documentReminder): void {
+            $this->actingAs($user, 'sanctum')
+                ->getJson('/api/reminders?remindable_type=Payment&display_status=reminder_due&per_page=10')
+                ->assertOk()
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $paymentReminder->id)
+                ->assertJsonPath('data.0.remindable_type', 'Payment')
+                ->assertJsonPath('data.0.remindable_id', $paymentReminder->remindable_id)
+                ->assertJsonPath('data.0.display_status', Reminder::DISPLAY_STATUS_REMINDER_DUE)
+                ->assertJsonPath('meta.total', 1)
+                ->assertJsonMissing(['title' => $documentReminder->title]);
         });
     }
 

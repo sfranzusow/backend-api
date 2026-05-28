@@ -253,6 +253,8 @@ heruntergeladen werden.
 - `POST /rental-agreements/{rentalAgreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
 - `GET /payments/{payment}/reminders`: Aufgaben/Erinnerungen einer Zahlung listen
 - `POST /payments/{payment}/reminders`: Aufgabe/Erinnerung an einer Zahlung anlegen
+- `GET /reminders/summary`: persönliche Dashboard-Zähler nach Vorgangsart und Status
+- `GET /reminders`: persönliche, filterbare Reminder-Inbox über alle Vorgänge
 - `PATCH /reminders/{reminder}`: Frist/Erinnerung aktualisieren
 - `DELETE /reminders/{reminder}`: Frist/Erinnerung loeschen
 
@@ -337,6 +339,8 @@ Bei Fristen und Erinnerungen gilt:
 - erlaubte Reminder-Status sind `pending`, `done`, `cancelled`
 - `display_status` ist fuer Frontend-Badges abgeleitet: `open`, `reminder_due`, `overdue`, `done`, `cancelled`
 - beim Wechsel auf `done` setzt der Server `completed_at`, wenn kein eigener Wert uebergeben wird
+- `GET /reminders/summary` zaehlt nur Reminder des aktuellen Benutzers (`assigned_to_id`) und gruppiert nach `remindable_type` sowie `display_status`
+- `GET /reminders` liefert die dazu passende Liste; Filter sind `remindable_type`, `display_status`, `status`, `due_from`, `due_until`, `remind_from`, `remind_until`, `per_page`
 - `tenant` darf nur eigene, ueber `assigned_to_id` zugewiesene Erinnerungen an
   fuer ihn sichtbaren Vorgaengen sehen, aber nicht anlegen, aendern oder loeschen
 

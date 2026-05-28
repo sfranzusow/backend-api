@@ -2749,6 +2749,149 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
+  /reminders:
+    get:
+      tags: [Reminders]
+      summary: Persönliche Reminder-Inbox listen
+      description: |
+        Listet die dem authentifizierten Benutzer über `assigned_to_id`
+        zugewiesenen Reminder über alle unterstützten Vorgänge hinweg.
+        Frontend kann über `remindable_type` und `remindable_id` zum konkreten
+        Dokument, Mietvertrag oder zur Zahlung navigieren.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: remindable_type
+          in: query
+          schema:
+            type: string
+            enum: [Document, RentalAgreement, Payment]
+          description: Filtert nach Vorgangsart.
+        - name: display_status
+          in: query
+          schema:
+            type: string
+            enum: [open, reminder_due, overdue, done, cancelled]
+          description: Filtert nach abgeleitetem Oberflächenstatus.
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, done, cancelled]
+          description: Filtert nach gespeichertem Bearbeitungsstatus.
+        - name: due_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filtert Reminder mit `due_at` ab diesem Zeitpunkt.
+        - name: due_until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filtert Reminder mit `due_at` bis zu diesem Zeitpunkt.
+        - name: remind_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filtert Reminder mit `remind_at` ab diesem Zeitpunkt.
+        - name: remind_until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filtert Reminder mit `remind_at` bis zu diesem Zeitpunkt.
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Persönliche Reminder-Liste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderPaginator'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /reminders/summary:
+    get:
+      tags: [Reminders]
+      summary: Persönliche Reminder-Zahlen für Dashboard
+      description: |
+        Liefert Zähler für die dem authentifizierten Benutzer zugewiesenen
+        Reminder, gruppiert nach `display_status` und `remindable_type`.
+        Diese Zahlen sind für Dashboard-Kacheln gedacht; ein Klick kann mit
+        denselben Filtern auf `GET /reminders` führen.
+      security:
+        - sanctumBearer: []
+      parameters:
+        - name: remindable_type
+          in: query
+          schema:
+            type: string
+            enum: [Document, RentalAgreement, Payment]
+          description: Optionaler Filter nach Vorgangsart.
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, done, cancelled]
+          description: Optionaler Filter nach gespeichertem Bearbeitungsstatus.
+        - name: due_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optionaler Filter für `due_at` ab diesem Zeitpunkt.
+        - name: due_until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optionaler Filter für `due_at` bis zu diesem Zeitpunkt.
+        - name: remind_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optionaler Filter für `remind_at` ab diesem Zeitpunkt.
+        - name: remind_until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optionaler Filter für `remind_at` bis zu diesem Zeitpunkt.
+      responses:
+        '200':
+          description: Reminder-Zähler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReminderSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validierungsfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
   /reminders/{reminder}:
     parameters:
       - name: reminder
@@ -2758,7 +2901,7 @@ paths:
           type: integer
     patch:
       tags: [Reminders]
-      summary: Dokument-Aufgabe oder Erinnerung aktualisieren
+      summary: Reminder aktualisieren
       description: |
         Aktualisiert Titel, Notizen, Fälligkeit, Erinnerungszeit, Zuweisung,
         Metadaten oder Status. Beim Wechsel auf `done` setzt der Server
@@ -2796,7 +2939,7 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
     delete:
       tags: [Reminders]
-      summary: Dokument-Aufgabe oder Erinnerung löschen
+      summary: Reminder löschen
       security:
         - sanctumBearer: []
       responses:
@@ -4366,6 +4509,72 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    ReminderPaginator:
+      type: object
+      description: Laravel paginierte Resource-Collection (data + links + meta)
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reminder'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+    ReminderSummary:
+      type: object
+      required: [total, by_display_status, by_remindable_type]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        by_display_status:
+          $ref: '#/components/schemas/ReminderSummaryStatusCounts'
+        by_remindable_type:
+          type: object
+          required: [Document, RentalAgreement, Payment]
+          properties:
+            Document:
+              $ref: '#/components/schemas/ReminderSummaryTypeCounts'
+            RentalAgreement:
+              $ref: '#/components/schemas/ReminderSummaryTypeCounts'
+            Payment:
+              $ref: '#/components/schemas/ReminderSummaryTypeCounts'
+
+    ReminderSummaryStatusCounts:
+      type: object
+      required: [open, reminder_due, overdue, done, cancelled]
+      properties:
+        open:
+          type: integer
+          minimum: 0
+        reminder_due:
+          type: integer
+          minimum: 0
+        overdue:
+          type: integer
+          minimum: 0
+        done:
+          type: integer
+          minimum: 0
+        cancelled:
+          type: integer
+          minimum: 0
+
+    ReminderSummaryTypeCounts:
+      allOf:
+        - $ref: '#/components/schemas/ReminderSummaryStatusCounts'
+        - type: object
+          required: [total]
+          properties:
+            total:
+              type: integer
+              minimum: 0
 
     ReminderActions:
       type: object

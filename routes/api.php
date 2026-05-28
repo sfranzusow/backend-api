@@ -56,6 +56,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/documents/{document}/signed-download', [DocumentController::class, 'signedDownload']);
     Route::get('/documents/{document}/reminders', [ReminderController::class, 'indexForDocument']);
     Route::post('/documents/{document}/reminders', [ReminderController::class, 'storeForDocument']);
+    Route::get('/reminders', [ReminderController::class, 'index']);
+    Route::get('/reminders/summary', [ReminderController::class, 'summary']);
     Route::patch('/reminders/{reminder}', [ReminderController::class, 'update']);
     Route::delete('/reminders/{reminder}', [ReminderController::class, 'destroy']);
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);

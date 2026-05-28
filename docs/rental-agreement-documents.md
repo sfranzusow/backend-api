@@ -125,6 +125,8 @@ Aktuell implementierte Endpunkte:
 - `POST /rental-agreements/{rentalAgreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
 - `GET /payments/{payment}/reminders`: Aufgaben/Erinnerungen einer Zahlung listen
 - `POST /payments/{payment}/reminders`: Aufgabe/Erinnerung an einer Zahlung anlegen
+- `GET /reminders/summary`: persönliche Dashboard-Zähler nach Vorgangsart und Status
+- `GET /reminders`: persönliche, filterbare Reminder-Inbox über alle Vorgänge
 - `PATCH /reminders/{reminder}`: Frist/Erinnerung aktualisieren
 - `DELETE /reminders/{reminder}`: Frist/Erinnerung loeschen
 
@@ -159,7 +161,11 @@ auf `signed_uploaded` gesetzt. `void` ist final; verworfene Versionen werden
 nicht mehr per Download ausgeliefert.
 
 Reminder sind zunaechst sichtbare Workflow-Hilfen. Sie haben die Status
-`pending`, `done` und `cancelled`; eine automatische Benachrichtigung per Job
+`pending`, `done` und `cancelled`; fuer die Oberflaeche wird daraus
+`display_status` mit `open`, `reminder_due`, `overdue`, `done` oder
+`cancelled` abgeleitet. `GET /reminders/summary` zaehlt die dem aktuellen
+Benutzer zugewiesenen Reminder fuer Dashboard-Kacheln, `GET /reminders`
+liefert die klickbare Liste dazu. Eine automatische Benachrichtigung per Job
 ist noch nicht Teil des Pakets.
 
 ## Modulgrenzen
@@ -435,6 +441,8 @@ implementiert.
 - `POST /rental-agreements/{rentalAgreement}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `GET /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `POST /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `GET /reminders/summary`: implementiert fuer persoenliche Dashboard-Zaehler
+- `GET /reminders`: implementiert fuer persoenliche Reminder-Inbox
 - `PATCH /reminders/{reminder}`: implementiert fuer Fristen/Erinnerungen
 - `DELETE /reminders/{reminder}`: implementiert fuer Fristen/Erinnerungen
 
