@@ -36,7 +36,7 @@ Das bedeutet:
 - Documents darf am Anfang `RentalAgreement` als ersten Anwendungsfall kennen,
   sollte aber nicht ausschliesslich darauf zugeschnitten werden.
 - Die API darf fuer gute UX kontextbezogene Routen anbieten, z. B.
-  `/rental-agreements/{rentalAgreement}/documents`, intern sollte das Dokument
+  `/rental-agreements/{rental_agreement}/documents`, intern sollte das Dokument
   aber generisch modelliert werden.
 
 Der Schnitt ist bewusst modular, aber noch kein Microservice. Es ist ein
@@ -107,11 +107,16 @@ Aktuell implementierte Endpunkte:
 
 - `GET /bank-accounts`: Bankkonten/Zahlungsempfaenger listen
 - `POST /bank-accounts`: Bankkonto/Zahlungsempfaenger anlegen
-- `GET /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger anzeigen
-- `PUT/PATCH /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger aktualisieren
-- `DELETE /bank-accounts/{bankAccount}`: Bankkonto/Zahlungsempfaenger loeschen
-- `GET /rental-agreements/{rentalAgreement}/documents`: Dokumente eines Mietvertrags listen
-- `POST /rental-agreements/{rentalAgreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
+- `GET /bank-accounts/{bank_account}`: Bankkonto/Zahlungsempfaenger anzeigen
+- `PUT/PATCH /bank-accounts/{bank_account}`: Bankkonto/Zahlungsempfaenger aktualisieren
+- `DELETE /bank-accounts/{bank_account}`: Bankkonto/Zahlungsempfaenger loeschen
+- `GET /rental-agreements/{rental_agreement}/documents`: Dokumente eines Mietvertrags listen
+- `POST /rental-agreements/{rental_agreement}/documents`: Dokumentakte im Status `draft` am Mietvertrag anlegen
+- `GET /rental-agreements/{rental_agreement}/payments`: Zahlungen eines Mietvertrags listen
+- `POST /rental-agreements/{rental_agreement}/payments`: Zahlung am Mietvertrag anlegen
+- `GET /payments/{payment}`: einzelne Zahlung anzeigen
+- `PATCH /payments/{payment}`: Zahlung aktualisieren
+- `DELETE /payments/{payment}`: Zahlung loeschen
 - `GET /documents/{document}`: einzelne Dokument-Metadaten anzeigen
 - `POST /documents/{document}/generate`: Snapshot-Version und PDF aus Vorlage erzeugen
 - `POST /documents/{document}/share`: erzeugte Dokumentversion freigeben
@@ -121,8 +126,8 @@ Aktuell implementierte Endpunkte:
 - `GET /documents/{document}/signed-download`: unterschriebene Datei herunterladen
 - `GET /documents/{document}/reminders`: Aufgaben/Erinnerungen eines Dokuments listen
 - `POST /documents/{document}/reminders`: Aufgabe/Erinnerung am Dokument anlegen
-- `GET /rental-agreements/{rentalAgreement}/reminders`: Aufgaben/Erinnerungen eines Mietvertrags listen
-- `POST /rental-agreements/{rentalAgreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
+- `GET /rental-agreements/{rental_agreement}/reminders`: Aufgaben/Erinnerungen eines Mietvertrags listen
+- `POST /rental-agreements/{rental_agreement}/reminders`: Aufgabe/Erinnerung am Mietvertrag anlegen
 - `GET /payments/{payment}/reminders`: Aufgaben/Erinnerungen einer Zahlung listen
 - `POST /payments/{payment}/reminders`: Aufgabe/Erinnerung an einer Zahlung anlegen
 - `GET /reminders/summary`: persönliche Dashboard-Zähler nach Vorgangsart und Status
@@ -413,21 +418,26 @@ implementiert.
 - `GET /document-templates`: Vorlagenliste
 - `GET /document-template-placeholders?document_type=rental_agreement_contract`:
   implementiert fuer Platzhalter-Metadaten je Dokumenttyp
-- `GET /document-templates/{template}`: Vorlage anzeigen
+- `GET /document-templates/{document_template}`: Vorlage anzeigen
 - `POST /document-templates`: implementiert fuer Admin-Vorlagenanlage
-- `PUT/PATCH /document-templates/{template}`: implementiert fuer Admin-Vorlagenbearbeitung
-- `POST /document-templates/{template}/activate`: implementiert fuer Aktivierung
+- `PUT/PATCH /document-templates/{document_template}`: implementiert fuer Admin-Vorlagenbearbeitung
+- `POST /document-templates/{document_template}/activate`: implementiert fuer Aktivierung
   inklusive Archivierung konkurrierender aktiver Vorlagen
-- `DELETE /document-templates/{template}`: implementiert fuer nicht aktive Vorlagen
+- `DELETE /document-templates/{document_template}`: implementiert fuer nicht aktive Vorlagen
 - `GET /document-layout-templates`: implementiert fuer Layout-Verwaltung
 - `POST /document-layout-templates`: implementiert fuer Layout-Anlage
-- `GET /document-layout-templates/{layout}`: implementiert fuer einzelne Layouts
-- `PUT/PATCH /document-layout-templates/{layout}`: implementiert fuer Layout-Bearbeitung
-- `POST /document-layout-templates/{layout}/activate`: implementiert fuer Aktivierung
+- `GET /document-layout-templates/{document_layout_template}`: implementiert fuer einzelne Layouts
+- `PUT/PATCH /document-layout-templates/{document_layout_template}`: implementiert fuer Layout-Bearbeitung
+- `POST /document-layout-templates/{document_layout_template}/activate`: implementiert fuer Aktivierung
   inklusive Archivierung konkurrierender aktiver Layouts
-- `DELETE /document-layout-templates/{layout}`: implementiert fuer nicht aktive Layouts
-- `POST /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten
-- `GET /rental-agreements/{rentalAgreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
+- `DELETE /document-layout-templates/{document_layout_template}`: implementiert fuer nicht aktive Layouts
+- `POST /rental-agreements/{rental_agreement}/documents`: implementiert fuer Dokument-Metadaten
+- `GET /rental-agreements/{rental_agreement}/documents`: implementiert fuer Dokument-Metadaten eines Vertrags
+- `GET /rental-agreements/{rental_agreement}/payments`: implementiert fuer Zahlungen eines Vertrags
+- `POST /rental-agreements/{rental_agreement}/payments`: implementiert fuer Zahlungen eines Vertrags
+- `GET /payments/{payment}`: implementiert fuer einzelne Zahlungen
+- `PATCH /payments/{payment}`: implementiert fuer Zahlungsaktualisierung
+- `DELETE /payments/{payment}`: implementiert fuer Zahlungsloeschung
 - `GET /documents/{document}`: implementiert fuer Dokument-Metadaten
 - `POST /documents/{document}/generate`: implementiert fuer erste Snapshot-/PDF-Erzeugung
 - `POST /documents/{document}/share`: implementiert fuer Freigabe
@@ -437,8 +447,8 @@ implementiert.
 - `GET /documents/{document}/signed-download`: implementiert fuer unterschriebene Uploads
 - `GET /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `POST /documents/{document}/reminders`: implementiert fuer Fristen/Erinnerungen
-- `GET /rental-agreements/{rentalAgreement}/reminders`: implementiert fuer Fristen/Erinnerungen
-- `POST /rental-agreements/{rentalAgreement}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `GET /rental-agreements/{rental_agreement}/reminders`: implementiert fuer Fristen/Erinnerungen
+- `POST /rental-agreements/{rental_agreement}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `GET /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `POST /payments/{payment}/reminders`: implementiert fuer Fristen/Erinnerungen
 - `GET /reminders/summary`: implementiert fuer persoenliche Dashboard-Zaehler
@@ -449,7 +459,7 @@ implementiert.
 Fuer eine HTML-Vorschau kann spaeter zusaetzlich ein Preview-Endpunkt sinnvoll
 sein:
 
-- `POST /rental-agreements/{rentalAgreement}/document-preview`
+- `POST /rental-agreements/{rental_agreement}/document-preview`
 
 ## Frontend-Hinweise
 
@@ -496,7 +506,7 @@ sein:
 - rechtssichere digitale Signatur
 - automatische Identitaetspruefung
 - Signatur-Audit-Log
-- Zahlungs- oder Kautionsverwaltung
+- echte Zahlungsabwicklung, Kautionskonto-Fuehrung oder Banking-Integration
 - juristische Pruefung der Mustermietvertraege
 
 ## Erste Backend-Umsetzung
@@ -636,13 +646,21 @@ Noch offen:
 Ziel: Kaution und Zahlungen sollen fachlich getrennt vom Documents-Modul
 modelliert werden.
 
-Geplanter Umfang:
+Umgesetzt:
 
-- klaeren, ob es nur Kautionsstatus oder echte Zahlungsvorgaenge braucht
-- Modelle fuer Kaution, Zahlungsplan oder Zahlungseintrag planen
-- Rollen- und Sichtbarkeitsregeln fuer Vermieter und Mieter definieren
-- keine direkte Kopplung an PDF-Dateien; Dokumente duerfen hoechstens Berichte
-  oder Belege referenzieren
+- `Payment` als generische Zahlungsstruktur fuer Miete, Kaution,
+  Kautionsrueckzahlung, Nebenkosten und sonstige Zahlungen.
+- Zahlungen haengen polymorph an einem Vorgang; fuer Mietvertraege aktuell an
+  `RentalAgreement`.
+- `GET /rental-agreements/{rental_agreement}/payments` und
+  `POST /rental-agreements/{rental_agreement}/payments` sind implementiert.
+- `GET /payments/{payment}`, `PATCH /payments/{payment}` und
+  `DELETE /payments/{payment}` sind implementiert.
+- Rollen- und Sichtbarkeitsregeln fuer Vermieter, Mieter und Admins sind
+  umgesetzt.
+- Zahlungen bleiben fachlich getrennt vom Documents-Modul; Dokumente duerfen
+  spaeter Belege oder Berichte referenzieren, koppeln aber nicht direkt an die
+  Zahlungslogik.
 
 ### Paket 8: Mieter- und Vermieter-Sichten verfeinern
 
@@ -669,7 +687,7 @@ Umgesetzt:
   Verwaltungsbuttons.
 - Dokumentlisten am Mietvertrag koennen nach `status` und `document_type`
   gefiltert werden.
-- `GET /rental-agreements/{rentalAgreement}/documents?include=reminders`
+- `GET /rental-agreements/{rental_agreement}/documents?include=reminders`
   liefert Reminder gezielt fuer Frontend-Listenkarten mit. Fuer reine
   Mieter-Sichten werden dabei nur eigene `assigned_to_id`-Zuweisungen
   ausgeliefert.
