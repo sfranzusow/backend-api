@@ -190,6 +190,35 @@ Wichtige Validierungsregeln fuer das Frontend:
 - beim Aktualisieren darf `bank_account_id` nicht auf ein fremdes Konto zeigen
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
 
+### Suche und Listenfilter
+
+Aktuell ist die API gut fuer bekannte IDs, Status und Datumsbereiche, aber
+noch nicht fuer alle freien Suchfelder einer operativen Oberflaeche.
+
+Bereits vorhanden:
+
+- Mietvertraege: `status`, `property_id`, `landlord_id`, `tenant_id`,
+  `starts_from`, `starts_until`, `include=documents,payments,reminders`
+- Zahlungen am Mietvertrag: `type`, `direction`, `status`, `due_from`,
+  `due_until`, `include=reminders`
+- Benutzerverwaltung: `name`, `email`, `phone_number`, `organization_id`,
+  `role`, `sort`, `direction`
+- Objekte: `status`, `type`, `address_id`
+- Reminder-Inbox: `remindable_type`, `display_status`, `status`, `due_from`,
+  `due_until`, `remind_from`, `remind_until`
+
+Geplantes Backend-Paket:
+
+- Mietvertrag direkt nach Mietername oder Objektadresse suchen, nicht nur ueber
+  vorher bekannte `tenant_id` oder `property_id`
+- Objekte nach Adresse, PLZ, Stadt und Einheit suchen
+- Zahlungen optional global listen und nach Mietvertrag, Objekt, Mieter,
+  Faelligkeitsdatum und Bezahldatum filtern
+- `paid_from`/`paid_until` fuer Zahlungslisten ergaenzen
+
+Wichtig fuer die Frontend-Uebergabe: Diese geplanten Suchfilter erst verwenden,
+wenn sie in `docs/openapi.yaml` stehen.
+
 ### Zahlungen
 
 Die Payments-API verwaltet Geldbewegungen und geplante Forderungen generisch.
@@ -311,6 +340,8 @@ Beim Erzeugen gilt:
 - `Document.status` und `DocumentVersion.status` werden auf `generated` gesetzt
 - die PDF-Datei wird als `DocumentFile` mit `file_type=generated_pdf` gespeichert
 - wenn ein bereits erzeugtes Dokument erneut erzeugt wird, wird die vorherige neueste Version auf `void` gesetzt
+- `Document.snapshot_status` zeigt dem Frontend, ob die neueste nutzbare
+  Version noch zu den aktuellen Snapshot-Quellen passt
 
 Beim Workflow gilt:
 
@@ -320,6 +351,16 @@ Beim Workflow gilt:
 - `void` ist final; Downloads, Uploads und erneute Erzeugung liefern dann keinen neuen Workflow-Fortschritt mehr
 - `tenant` sieht Dokumente erst ab `shared` oder `signed_uploaded`; `draft`,
   `generated` und `void` bleiben in Mieter-Responses verborgen
+- `snapshot_status.state=not_generated` bedeutet: keine nutzbare erzeugte
+  Version vorhanden
+- `snapshot_status.state=current` bedeutet: die Version passt zu den aktuellen
+  Vertrags-, Objekt-, Parteien-, Organisations- und Bankdaten
+- `snapshot_status.state=outdated` bedeutet: mindestens eine dieser
+  Datenquellen wurde nach `latest_version.generated_at` geaendert
+- `snapshot_status.state=unknown` bedeutet: der Server konnte die Quellen nicht
+  pruefen; das Frontend sollte daraus keinen Warnzustand ableiten
+- bei `outdated` sollte das Frontend einen Hinweis anzeigen und eine
+  Neuerzeugung nur anbieten, wenn `actions.generate=true` ist
 
 Beim Upload gilt:
 

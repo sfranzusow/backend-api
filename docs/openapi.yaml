@@ -4720,7 +4720,7 @@ components:
 
     Document:
       type: object
-      required: [id, documentable_type, documentable_id, document_type, status, actions, created_at, updated_at]
+      required: [id, documentable_type, documentable_id, document_type, status, snapshot_status, actions, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -4756,6 +4756,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/DocumentVersion'
           nullable: true
+        snapshot_status:
+          $ref: '#/components/schemas/DocumentSnapshotStatus'
         reminders:
           description: |
             Für `admin` und berechtigten `landlord` alle geladenen Reminder.
@@ -4780,6 +4782,43 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    DocumentSnapshotStatus:
+      type: object
+      description: |
+        Berechneter Frontend-Hinweis zur neuesten nutzbaren Dokumentversion.
+        Bei Mietvertragsdokumenten vergleicht der Server `generated_at` mit
+        den `updated_at`-Zeitpunkten der aktuellen Snapshot-Quellen:
+        Mietvertrag, Objekt, Adresse, Vermieter, Vermieter-Organisation,
+        Mieter und Bankkonto. Eine geaenderte Vorlage allein macht eine alte
+        Version nicht automatisch `outdated`, weil Vorlagen im Snapshot
+        eingefroren sind.
+      required: [state, is_outdated, reason, generated_at, source_updated_at]
+      properties:
+        state:
+          type: string
+          enum: [not_generated, current, outdated, unknown]
+          description: |
+            `not_generated` = keine nutzbare erzeugte Version;
+            `current` = Snapshot ist nach aktuellem Datenstand frisch;
+            `outdated` = Snapshot-Quelle wurde nach PDF-Erzeugung geaendert;
+            `unknown` = Quellen konnten nicht geprueft werden.
+        is_outdated:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+          enum: [source_data_changed_after_generation]
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Zeit der PDF-/Snapshot-Erzeugung der neuesten nutzbaren Version.
+        source_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Neuester `updated_at`-Zeitpunkt der geprueften Snapshot-Quellen.
 
     DocumentActions:
       type: object

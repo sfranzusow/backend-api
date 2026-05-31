@@ -9,6 +9,7 @@ use App\Http\Requests\Api\UpdateRentalAgreementRequest;
 use App\Http\Resources\Api\RentalAgreementResource;
 use App\Models\Document;
 use App\Models\RentalAgreement;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -144,7 +145,21 @@ class RentalAgreementController extends Controller
         if (in_array('documents', $includes, true)) {
             $relations['documents'] = function ($query) use ($limitToTenantView): void {
                 $query
-                    ->with(['template', 'latestVersion.files', 'creator:id,name,email'])
+                    ->with([
+                        'template',
+                        'latestVersion.files',
+                        'creator:id,name,email',
+                        'documentable' => function (MorphTo $morphTo): void {
+                            $morphTo->morphWith([
+                                RentalAgreement::class => [
+                                    'property.address',
+                                    'landlord.organization',
+                                    'tenant',
+                                    'bankAccount',
+                                ],
+                            ]);
+                        },
+                    ])
                     ->when($limitToTenantView, function ($query): void {
                         $query->whereIn('status', Document::tenantVisibleStatuses());
                     })

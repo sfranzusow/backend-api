@@ -10,6 +10,8 @@ use App\Models\DocumentVersion;
 use App\Models\Reminder;
 use App\Models\RentalAgreement;
 use App\Models\User;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,6 +41,7 @@ class DocumentResource extends JsonResource
                 'template' => DocumentTemplateResource::make($this->whenLoaded('template')),
             ]),
             'latest_version' => DocumentVersionResource::make($this->whenLoaded('latestVersion')),
+            'snapshot_status' => $this->snapshotStatus(),
             'reminders' => ReminderResource::collection($this->whenLoaded('reminders')),
             $this->mergeWhen(! $isTenantView, [
                 'created_by_id' => $this->created_by_id,
@@ -170,5 +173,123 @@ class DocumentResource extends JsonResource
         }
 
         return $latestVersion->files->contains('file_type', $fileType);
+    }
+
+    /**
+     * @return array{state: string, is_outdated: bool, reason: string|null, generated_at: string|null, source_updated_at: string|null}
+     */
+    private function snapshotStatus(): array
+    {
+        $latestVersion = $this->latestVersion();
+        $generatedAt = $latestVersion?->generated_at;
+
+        if (
+            ! $latestVersion instanceof DocumentVersion
+            || ! $generatedAt instanceof CarbonInterface
+            || $latestVersion->status === DocumentVersion::STATUS_VOID
+        ) {
+            return [
+                'state' => 'not_generated',
+                'is_outdated' => false,
+                'reason' => null,
+                'generated_at' => null,
+                'source_updated_at' => null,
+            ];
+        }
+
+        $sourceUpdatedAt = $this->sourceUpdatedAt();
+
+        if (! $sourceUpdatedAt instanceof CarbonInterface) {
+            return [
+                'state' => 'unknown',
+                'is_outdated' => false,
+                'reason' => null,
+                'generated_at' => $generatedAt->toISOString(),
+                'source_updated_at' => null,
+            ];
+        }
+
+        $isOutdated = $sourceUpdatedAt->greaterThan($generatedAt);
+
+        return [
+            'state' => $isOutdated ? 'outdated' : 'current',
+            'is_outdated' => $isOutdated,
+            'reason' => $isOutdated ? 'source_data_changed_after_generation' : null,
+            'generated_at' => $generatedAt->toISOString(),
+            'source_updated_at' => $sourceUpdatedAt->toISOString(),
+        ];
+    }
+
+    private function sourceUpdatedAt(): ?CarbonInterface
+    {
+        $document = $this->resource;
+
+        if (! $document instanceof DocumentModel || ! $document->relationLoaded('documentable')) {
+            return null;
+        }
+
+        $documentable = $document->getRelation('documentable');
+
+        if (! $documentable instanceof RentalAgreement) {
+            return null;
+        }
+
+        $timestamps = [];
+        $this->addModelTimestamp($timestamps, $documentable);
+
+        $property = $documentable->relationLoaded('property')
+            ? $documentable->getRelation('property')
+            : null;
+        $this->addModelTimestamp($timestamps, $property);
+
+        if ($property instanceof Model && $property->relationLoaded('address')) {
+            $this->addModelTimestamp($timestamps, $property->getRelation('address'));
+        }
+
+        $landlord = $documentable->relationLoaded('landlord')
+            ? $documentable->getRelation('landlord')
+            : null;
+        $this->addModelTimestamp($timestamps, $landlord);
+
+        if ($landlord instanceof Model && $landlord->relationLoaded('organization')) {
+            $this->addModelTimestamp($timestamps, $landlord->getRelation('organization'));
+        }
+
+        $this->addModelTimestamp(
+            $timestamps,
+            $documentable->relationLoaded('tenant') ? $documentable->getRelation('tenant') : null,
+        );
+        $this->addModelTimestamp(
+            $timestamps,
+            $documentable->relationLoaded('bankAccount') ? $documentable->getRelation('bankAccount') : null,
+        );
+
+        return $this->latestTimestamp($timestamps);
+    }
+
+    /**
+     * @param  list<CarbonInterface>  $timestamps
+     */
+    private function addModelTimestamp(array &$timestamps, mixed $model): void
+    {
+        if ($model instanceof Model && $model->updated_at instanceof CarbonInterface) {
+            $timestamps[] = $model->updated_at;
+        }
+    }
+
+    /**
+     * @param  list<CarbonInterface>  $timestamps
+     */
+    private function latestTimestamp(array $timestamps): ?CarbonInterface
+    {
+        $latestTimestamp = null;
+
+        foreach ($timestamps as $timestamp) {
+            if (! $latestTimestamp instanceof CarbonInterface || $timestamp->greaterThan($latestTimestamp)) {
+                $latestTimestamp = $timestamp;
+            }
+        }
+
+        return $latestTimestamp;
     }
 }

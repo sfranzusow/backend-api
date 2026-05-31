@@ -8,6 +8,7 @@ use App\Http\Requests\Api\StoreRentalAgreementDocumentRequest;
 use App\Http\Resources\Api\DocumentResource;
 use App\Models\Document;
 use App\Models\RentalAgreement;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -71,7 +72,7 @@ class RentalAgreementDocumentController extends Controller
             'created_by_id' => $request->user()?->id,
         ]);
 
-        $document->load(['template', 'latestVersion.files', 'creator:id,name,email']);
+        $document->load($this->responseRelations($request, [], false));
 
         return response()->json([
             'data' => new DocumentResource($document),
@@ -103,6 +104,17 @@ class RentalAgreementDocumentController extends Controller
         $relations = self::BASE_RESPONSE_RELATIONS;
         $includes = $this->requestedIncludes($validated);
         $authUser = $request->user();
+
+        $relations['documentable'] = function (MorphTo $morphTo): void {
+            $morphTo->morphWith([
+                RentalAgreement::class => [
+                    'property.address',
+                    'landlord.organization',
+                    'tenant',
+                    'bankAccount',
+                ],
+            ]);
+        };
 
         if (in_array('reminders', $includes, true)) {
             $relations['reminders'] = function ($query) use ($authUser, $limitToAssignedTenant): void {

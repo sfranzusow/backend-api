@@ -887,6 +887,76 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.actions.create_reminder', true);
     }
 
+    public function test_document_response_marks_snapshot_outdated_after_rental_agreement_source_data_changes(): void
+    {
+        $user = null;
+        $agreement = null;
+        $document = null;
+        $template = null;
+
+        $this->travelTo('2026-06-01T10:00:00+00:00', function () use (&$user, &$agreement, &$template): void {
+            $user = User::factory()->create();
+            $user->assignRole(RoleName::Landlord->value);
+            $property = $this->propertyManagedBy($user);
+            $agreement = RentalAgreement::factory()->create([
+                'property_id' => $property->id,
+                'landlord_id' => $user->id,
+                'rent_cold' => '900.00',
+            ]);
+            $template = DocumentTemplate::factory()->create([
+                'document_type' => 'rental_agreement_contract',
+                'status' => DocumentTemplate::STATUS_ACTIVE,
+            ]);
+        });
+
+        $this->travelTo('2026-06-02T10:00:00+00:00', function () use (&$document, $agreement, $template, $user): void {
+            $document = Document::factory()->create([
+                'documentable_type' => RentalAgreement::class,
+                'documentable_id' => $agreement->id,
+                'document_template_id' => $template->id,
+                'document_type' => 'rental_agreement_contract',
+                'status' => Document::STATUS_GENERATED,
+            ]);
+            DocumentVersion::factory()->create([
+                'document_id' => $document->id,
+                'document_template_id' => $template->id,
+                'version_number' => 1,
+                'status' => DocumentVersion::STATUS_GENERATED,
+                'generated_by_id' => $user->id,
+                'generated_at' => now(),
+            ]);
+        });
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJsonPath('data.snapshot_status.state', 'current')
+            ->assertJsonPath('data.snapshot_status.is_outdated', false)
+            ->assertJsonPath('data.snapshot_status.reason', null)
+            ->assertJsonPath('data.snapshot_status.generated_at', fn (mixed $value): bool => is_string($value) && str_starts_with($value, '2026-06-02T10:00:00'))
+            ->assertJsonPath('data.snapshot_status.source_updated_at', fn (mixed $value): bool => is_string($value) && str_starts_with($value, '2026-06-01T10:00:00'));
+
+        $this->travelTo('2026-06-03T10:00:00+00:00', function () use ($agreement): void {
+            $agreement->forceFill([
+                'rent_cold' => '950.00',
+            ])->save();
+        });
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJsonPath('data.snapshot_status.state', 'outdated')
+            ->assertJsonPath('data.snapshot_status.is_outdated', true)
+            ->assertJsonPath('data.snapshot_status.reason', 'source_data_changed_after_generation')
+            ->assertJsonPath('data.snapshot_status.source_updated_at', fn (mixed $value): bool => is_string($value) && str_starts_with($value, '2026-06-03T10:00:00'));
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreement->id.'/documents')
+            ->assertOk()
+            ->assertJsonPath('data.0.snapshot_status.state', 'outdated')
+            ->assertJsonPath('data.0.snapshot_status.is_outdated', true);
+    }
+
     public function test_reminder_validates_reminder_before_due_date(): void
     {
         $user = User::factory()->create();

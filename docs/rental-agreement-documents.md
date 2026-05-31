@@ -155,6 +155,11 @@ Fuer getrennte Mieter- und Vermieter-Sichten gilt aktuell:
 - Mietvertrags-Responses enthalten `actions` fuer `update`, `delete`,
   `create_document` und `create_payment`; interne `notes` werden fuer reine
   Mieter-Sichten nicht ausgeliefert.
+- Dokument-Responses enthalten `snapshot_status`. Das Feld zeigt dem Frontend,
+  ob die neueste nutzbare Dokumentversion `current`, `outdated`,
+  `not_generated` oder `unknown` ist. `outdated` bedeutet: Vertrags-, Objekt-,
+  Parteien-, Organisations- oder Bankdaten wurden nach der PDF-Erzeugung
+  geaendert.
 
 Beim Erzeugen entsteht eine `DocumentVersion` mit Snapshots der Vorlage und
 Mietvertragsdaten. Falls fuer den Vermieter ein aktives Layout existiert,
@@ -530,11 +535,12 @@ Die ersten Backend-Schritte sind umgesetzt:
 
 Naechste sinnvolle Backend-Schritte:
 
-1. Frontend-Admin-/Vermieter-Oberflaeche fuer Bankkonten, Vorlagenauswahl und Layout-Verwaltung bauen.
+1. Such- und Listenfilter fuer operative Frontend-Ansichten ausbauen:
+   Mietvertraege nach Mietername oder Objektadresse, Objekte nach Adresse,
+   sowie Zahlungen global und nach `paid_at` filtern.
 2. Weitere Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
-3. Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen.
-4. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
-5. Faellige Reminder spaeter per Command/Job automatisch melden.
+3. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
+4. Faellige Reminder spaeter per Command/Job automatisch melden.
 
 Danach kann das Frontend den einfachen Workflow bauen: Vorlage waehlen,
 Vorschau ansehen, PDF erzeugen, PDF herunterladen, unterschriebene Datei
@@ -610,10 +616,21 @@ Umgesetzt:
 
 Noch offen:
 
-- Frontend-Hinweise fuer veraltete Dokumentversionen ermoeglichen, wenn
-  Vertragsdaten nach PDF-Erzeugung geaendert wurden
 - Mietvertragsworkflow fuer Aktivierung, Beendigung und Kuendigung getrennt
   weiter ausbauen
+
+Implementiert fuer Frontend-Hinweise:
+
+- `Document.snapshot_status.state` ist `not_generated`, `current`,
+  `outdated` oder `unknown`.
+- `Document.snapshot_status.is_outdated=true` bedeutet, dass seit
+  `latest_version.generated_at` mindestens eine Snapshot-Quelle neuer ist.
+- Gepruefte Snapshot-Quellen fuer Mietvertragsdokumente sind aktuell:
+  `RentalAgreement`, `Property`, `Address`, Vermieter, Vermieter-Organisation,
+  Mieter und `BankAccount`.
+- Das Frontend sollte bei `outdated` eine unaufdringliche Warnung anzeigen,
+  z. B. "Vertragsdaten wurden seit der PDF-Erzeugung geaendert". Einen Button
+  zur Neuerzeugung nur anzeigen, wenn `actions.generate=true` ist.
 
 Implementierte API:
 
@@ -727,6 +744,36 @@ Noch offen:
 - Frontend-Auswahl und Vorbelegung fuer Bankkonten
 - Produktentscheidung, ob beim Anlegen eines Mietvertrags automatisch ein
   Default-Konto vorausgewaehlt oder nur frontendseitig vorgeschlagen wird
+
+### Paket 10: Suche und operative Listenfilter
+
+Ziel: Frontend-Ansichten sollen nicht nur ueber bekannte IDs navigieren,
+sondern typische Arbeitsfragen direkt beantworten koennen: "Welcher
+Mietvertrag gehoert zu diesem Objekt?", "Welche Verträge hat Mieter Max
+Mustermann?", "Welche Zahlungen waren im Juni faellig oder bezahlt?".
+
+Aktueller Stand:
+
+- Mietvertraege koennen nach `status`, `property_id`, `landlord_id`,
+  `tenant_id`, `starts_from` und `starts_until` gefiltert werden.
+- Zahlungen koennen innerhalb eines Mietvertrags nach `type`, `direction`,
+  `status`, `due_from` und `due_until` gefiltert werden.
+- Benutzer koennen in der Admin-/User-Verwaltung nach `name`, `email`,
+  `phone_number`, `organization_id` und `role` gefiltert werden.
+- Objekte koennen nach `status`, `type` und `address_id` gefiltert werden.
+
+Geplanter Backend-Umfang:
+
+- `GET /rental-agreements` um direkte Suchfilter erweitern, z. B.
+  `tenant_name`, `property_q` oder ein allgemeines `q`.
+- `GET /properties` um Adress-/Einheitensuche erweitern, z. B. Strasse,
+  Hausnummer, PLZ, Stadt und `unit_number`.
+- Optional eine globale Zahlungsliste `GET /payments` fuer Dashboard und
+  Buchhaltungsansichten anbieten; Filter: `property_id`, `tenant_id`,
+  `rental_agreement_id`, `type`, `status`, `due_from`, `due_until`,
+  `paid_from`, `paid_until`.
+- Zahlungslisten um `paid_at`-Filter ergaenzen.
+- OpenAPI erst erweitern, wenn die Endpunkte tatsaechlich implementiert sind.
 
 ## Frontend-Uebergabe
 

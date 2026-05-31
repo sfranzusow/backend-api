@@ -8,7 +8,9 @@ use App\Http\Requests\Api\StoreSignedDocumentUploadRequest;
 use App\Http\Resources\Api\DocumentResource;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\RentalAgreement;
 use App\Services\Documents\DocumentWorkflowService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -145,6 +147,16 @@ class DocumentController extends Controller
 
         return [
             ...self::BASE_RESPONSE_RELATIONS,
+            'documentable' => function (MorphTo $morphTo): void {
+                $morphTo->morphWith([
+                    RentalAgreement::class => [
+                        'property.address',
+                        'landlord.organization',
+                        'tenant',
+                        'bankAccount',
+                    ],
+                ]);
+            },
             'reminders' => function ($query) use ($authUser, $limitToAssignedTenant): void {
                 $query
                     ->with(['remindable', 'creator:id,name,email', 'assignee:id,name,email'])

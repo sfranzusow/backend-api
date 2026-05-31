@@ -23,15 +23,20 @@
 - Paket 8 abgerundet: Dokumentlisten am Mietvertrag können nach `status` und `document_type` gefiltert werden; Mietvertragslisten unterstützen `starts_from`/`starts_until` und `include=documents,payments,reminders`; Zahlungslisten unterstützen `due_from`/`due_until` und `include=reminders`. Tenant-seitig bleiben Dokumente und Reminder auf sichtbare bzw. eigene Zuweisungen begrenzt.
 - Template-Verwaltung umgesetzt: Admin-API für Dokumentvorlagen mit CRUD, Aktivierung, Archivierung konkurrierender aktiver Vorlagen und Platzhaltervalidierung.
 - Bankverbindungen/Zahlungsempfänger umgesetzt: `BankAccount` für Benutzer oder Organisationen, CRUD-API für Admin/Landlord, optionale `bank_account_id` am Mietvertrag, Validierung gegen Vermieter/Organisation, Snapshot- und Placeholder-Erweiterung für Vertragsdokumente.
+- Dokument-Responses liefern `snapshot_status`, damit das Frontend sieht, ob die aktuelle PDF-/Upload-Version noch zu den aktuellen Mietvertrags-, Objekt-, Parteien- und Bankdaten passt.
 - AGENTS.md erweitert: Laravel-Best-Practice-Regeln und class-basierter Teststil für Pest/PHPUnit-kompatible Tests festgehalten.
 
-### Nächste mögliche Schritte
+### Nächste mögliche Backend-Pakete
 
 - Schlanken Neustart-Kontext für Frontend/KI festlegen: zuerst `TODO.md`, dann `docs/api-overview.md`, `docs/openapi.yaml` und bei Bedarf die Modulnotizen.
+- Paket 10 Such- und Listenfilter: operative Suche für Mietverträge, Objekte, Mieter und Zahlungen ausbauen. Aktuell gibt es viele ID-/Status-/Datumsfilter, aber noch keine direkte Suche nach Objektadresse, Mietername oder globale Zahlungsliste.
 - Datenlücken aus echter Mietvertragsvorlage weiter schließen: zusätzliche Objekt-/Übergabedaten, Anlagen, Hausordnung und Energieausweis fachlich modellieren.
-- Frontend-Oberfläche für Bankkonten/Zahlungsempfänger und Auswahl am Mietvertrag bauen.
 - Placeholder-Whitelist und Dokument-Snapshot für weitere echte Vertragsvorlagen erweitern.
 - Robusten mehrseitigen PDF-Renderer für echte Vertragsdokumente vorbereiten; der aktuelle Renderer reicht nur für die technische Pipeline.
+
+### Nächste mögliche Frontend-Punkte
+
+- Oberfläche für Bankkonten/Zahlungsempfänger und Auswahl am Mietvertrag fertig anbinden; Backend liefert dafür bereits `BankAccount` und `rental_agreements.bank_account_id`.
 - Frontend-Admin-Oberfläche für Dokumentvorlagen bauen.
 
 ### Frontend-Übergabe
