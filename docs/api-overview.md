@@ -170,6 +170,10 @@ Ein Mietvertrag:
 - referenziert genau einen `tenant`
 - kann optional ein `bank_account_id` als Zahlungsempfaenger referenzieren
 - kann Laufzeiten, Miete, Kaution und Status enthalten
+- kann optionale Vertragsdetails fuer echte Wohnraummietvertraege enthalten,
+  z. B. mitvermietete Raeume/Stellplaetze, Gemeinschaftsflaechen,
+  Befristungsgrund, Uebergabetermin, Umlageschluessel, Renovierungszustand,
+  Kleinreparaturgrenzen, Anlagen und individuelle Vereinbarungen
 - kann generische Dokumentakten haben
 - kann generische Zahlungen/Forderungen haben
 
@@ -189,6 +193,10 @@ Wichtige Validierungsregeln fuer das Frontend:
 - beim Aktualisieren darf `landlord` den Vertrag nicht auf einen anderen Vermieter oder ein fremd verwaltetes Objekt verschieben
 - beim Aktualisieren darf `bank_account_id` nicht auf ein fremdes Konto zeigen
 - erlaubte Statuswechsel sind `draft` -> `active`, `active` -> `terminated` oder `ended`; bereits finale Status bleiben final
+- `notes` bleibt eine interne Verwaltungsnotiz und wird fuer reine
+  `tenant`-Sichten ausgeblendet
+- `individual_agreements` ist fuer vertragliche individuelle Vereinbarungen
+  gedacht und wird auch in Dokument-Snapshots verwendet
 
 ### Suche und Listenfilter
 
@@ -342,6 +350,9 @@ Beim Erzeugen gilt:
 - wenn ein bereits erzeugtes Dokument erneut erzeugt wird, wird die vorherige neueste Version auf `void` gesetzt
 - `Document.snapshot_status` zeigt dem Frontend, ob die neueste nutzbare
   Version noch zu den aktuellen Snapshot-Quellen passt
+- Vertragsdetails wie `additional_spaces`, `handover_due_at`,
+  `individual_agreements` und Anlagen-Flags werden im `data_snapshot`
+  eingefroren und stehen als `rental_agreement.*`-Placeholder zur Verfuegung
 
 Beim Workflow gilt:
 

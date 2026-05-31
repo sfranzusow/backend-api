@@ -1050,11 +1050,15 @@ class RentalAgreementDocumentApiTest extends TestCase
             'rent_warm' => '1100.00',
             'deposit' => '2700.00',
             'currency' => 'EUR',
+            'additional_spaces' => 'Kellerraum 12, Stellplatz 4',
+            'handover_due_at' => '2026-05-30',
+            'individual_agreements' => 'Gartennutzung ist erlaubt.',
+            'house_rules_attached' => true,
         ]);
         $template = DocumentTemplate::factory()->create([
             'document_type' => 'rental_agreement_contract',
             'status' => DocumentTemplate::STATUS_ACTIVE,
-            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ property.area_living }}</p><p>{{ property.rooms }}</p><p>{{ property.floor }}</p><p>{{ rental_agreement.rent_cold }}</p><p>{{ bank_account.iban }}</p>',
+            'content' => '<h1>{{ document.title }}</h1><p>{{ landlord.name }}</p><p>{{ tenant.name }}</p><p>{{ property.area_living }}</p><p>{{ property.rooms }}</p><p>{{ property.floor }}</p><p>{{ rental_agreement.rent_cold }}</p><p>{{ bank_account.iban }}</p><p>{{ rental_agreement.additional_spaces }}</p><p>{{ rental_agreement.handover_due_at }}</p><p>{{ rental_agreement.individual_agreements }}</p><p>{{ rental_agreement.house_rules_attached }}</p>',
         ]);
         $document = Document::factory()->create([
             'documentable_type' => RentalAgreement::class,
@@ -1082,7 +1086,11 @@ class RentalAgreementDocumentApiTest extends TestCase
             ->assertJsonPath('data.latest_version.data_snapshot.property.rooms', fn (mixed $value): bool => (string) $value === '3')
             ->assertJsonPath('data.latest_version.data_snapshot.property.floor', fn (mixed $value): bool => (string) $value === '2')
             ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.rent_cold', '900.00')
-            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>82.50</p><p>3</p><p>2</p><p>900.00</p><p>DE89370400440532013000</p>')
+            ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.additional_spaces', 'Kellerraum 12, Stellplatz 4')
+            ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.handover_due_at', '2026-05-30')
+            ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.individual_agreements', 'Gartennutzung ist erlaubt.')
+            ->assertJsonPath('data.latest_version.data_snapshot.rental_agreement.house_rules_attached', true)
+            ->assertJsonPath('data.latest_version.content_snapshot', '<h1>Wohnraummietvertrag</h1><p>Erika Vermieter</p><p>Max Mieter</p><p>82.50</p><p>3</p><p>2</p><p>900.00</p><p>DE89370400440532013000</p><p>Kellerraum 12, Stellplatz 4</p><p>2026-05-30</p><p>Gartennutzung ist erlaubt.</p><p>ja</p>')
             ->assertJsonCount(1, 'data.latest_version.files');
 
         $filePath = $response->json('data.latest_version.files.0.path');

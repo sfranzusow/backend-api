@@ -26,6 +26,10 @@ class DocumentTemplateRenderer
             return '';
         }
 
+        if (is_bool($value)) {
+            return $value ? 'ja' : 'nein';
+        }
+
         if (is_scalar($value)) {
             return (string) $value;
         }

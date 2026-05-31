@@ -74,11 +74,19 @@ class DocumentTemplateApiTest extends TestCase
             ->assertOk()
             ->assertJsonFragment([
                 'path' => 'rental_agreement.notes',
-                'label' => 'Individuelle Vereinbarungen',
+                'label' => 'Interne Notizen',
                 'group' => 'Mietvertrag',
                 'type' => 'string',
                 'nullable' => true,
                 'example' => '{{ rental_agreement.notes }}',
+            ])
+            ->assertJsonFragment([
+                'path' => 'rental_agreement.individual_agreements',
+                'label' => 'Weitere individuelle Vereinbarungen',
+                'group' => 'Mietvertrag',
+                'type' => 'string',
+                'nullable' => true,
+                'example' => '{{ rental_agreement.individual_agreements }}',
             ])
             ->assertJsonFragment([
                 'path' => 'tenant.name',
@@ -87,6 +95,22 @@ class DocumentTemplateApiTest extends TestCase
                 'type' => 'string',
                 'nullable' => false,
                 'example' => '{{ tenant.name }}',
+            ])
+            ->assertJsonFragment([
+                'path' => 'rental_agreement.additional_spaces',
+                'label' => 'Mitvermietete Nebenräume / Stellplätze',
+                'group' => 'Mietvertrag',
+                'type' => 'string',
+                'nullable' => true,
+                'example' => '{{ rental_agreement.additional_spaces }}',
+            ])
+            ->assertJsonFragment([
+                'path' => 'rental_agreement.house_rules_attached',
+                'label' => 'Hausordnung beigefügt',
+                'group' => 'Mietvertrag',
+                'type' => 'boolean',
+                'nullable' => false,
+                'example' => '{{ rental_agreement.house_rules_attached }}',
             ]);
 
         $this->assertCount(

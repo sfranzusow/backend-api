@@ -24,6 +24,12 @@ class RentalAgreement extends Model
 
     public const STATUS_ENDED = 'ended';
 
+    public const RENOVATION_CONDITION_RENOVATED = 'renovated';
+
+    public const RENOVATION_CONDITION_UNRENOVATED = 'unrenovated';
+
+    public const RENOVATION_CONDITION_PARTLY_RENOVATED = 'partly_renovated';
+
     private const STATUS_TRANSITIONS = [
         self::STATUS_DRAFT => [self::STATUS_DRAFT, self::STATUS_ACTIVE],
         self::STATUS_ACTIVE => [self::STATUS_ACTIVE, self::STATUS_TERMINATED, self::STATUS_ENDED],
@@ -43,6 +49,24 @@ class RentalAgreement extends Model
         'service_charges',
         'deposit',
         'currency',
+        'lease_subject_description',
+        'additional_spaces',
+        'shared_facilities',
+        'fixed_term_reason',
+        'handover_due_at',
+        'operating_costs_allocation_key',
+        'renovation_condition',
+        'renovation_condition_notes',
+        'cosmetic_repairs_agreement',
+        'small_repairs_single_limit',
+        'small_repairs_annual_limit',
+        'handover_protocol_attached',
+        'house_rules_attached',
+        'operating_costs_overview_attached',
+        'energy_certificate_attached',
+        'self_disclosure_attached',
+        'other_attachments',
+        'individual_agreements',
         'status',
         'notes',
     ];
@@ -52,10 +76,18 @@ class RentalAgreement extends Model
         return [
             'date_from' => 'date',
             'date_to' => 'date',
+            'handover_due_at' => 'date',
             'rent_cold' => 'decimal:2',
             'rent_warm' => 'decimal:2',
             'service_charges' => 'decimal:2',
             'deposit' => 'decimal:2',
+            'small_repairs_single_limit' => 'decimal:2',
+            'small_repairs_annual_limit' => 'decimal:2',
+            'handover_protocol_attached' => 'boolean',
+            'house_rules_attached' => 'boolean',
+            'operating_costs_overview_attached' => 'boolean',
+            'energy_certificate_attached' => 'boolean',
+            'self_disclosure_attached' => 'boolean',
         ];
     }
 
@@ -69,6 +101,18 @@ class RentalAgreement extends Model
             self::STATUS_ACTIVE,
             self::STATUS_TERMINATED,
             self::STATUS_ENDED,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function renovationConditions(): array
+    {
+        return [
+            self::RENOVATION_CONDITION_RENOVATED,
+            self::RENOVATION_CONDITION_UNRENOVATED,
+            self::RENOVATION_CONDITION_PARTLY_RENOVATED,
         ];
     }
 

@@ -1804,7 +1804,7 @@ paths:
         Das Frontend soll diesen Endpunkt fuer Template-Editoren,
         Autocomplete und Einfuege-Menues verwenden. Die Antwort enthaelt nicht
         nur technische Pfade, sondern auch Labels, Gruppen, einfache Typen und
-        Beispiel-Tokens im Format `{{ rental_agreement.notes }}`.
+        Beispiel-Tokens im Format `{{ rental_agreement.individual_agreements }}`.
 
         Aktuell ist `rental_agreement_contract` implementiert. `admin` und
         `landlord` duerfen die Liste abrufen; `tenant` und `user` haben keinen
@@ -3982,6 +3982,64 @@ components:
           type: string
           enum: [draft, active, terminated, ended]
           default: draft
+        lease_subject_description:
+          type: string
+          nullable: true
+          description: Weitere Beschreibung des Mietgegenstands.
+        additional_spaces:
+          type: string
+          nullable: true
+          description: Mitvermietete Nebenraeume, Stellplaetze, Keller oder vergleichbare Flaechen.
+        shared_facilities:
+          type: string
+          nullable: true
+          description: Mitbenutzungsrechte an Gemeinschaftsflaechen.
+        fixed_term_reason:
+          type: string
+          nullable: true
+          description: Befristungsgrund bei Zeitmietvertrag.
+        handover_due_at:
+          type: string
+          format: date
+          nullable: true
+          description: Spaetester Termin fuer die Wohnungsuebergabe.
+        operating_costs_allocation_key:
+          type: string
+          nullable: true
+          description: Umlageschluessel fuer Betriebskosten, falls nicht gesetzlich vorgegeben.
+        renovation_condition:
+          type: string
+          nullable: true
+          enum: [renovated, unrenovated, partly_renovated]
+        renovation_condition_notes:
+          type: string
+          nullable: true
+        cosmetic_repairs_agreement:
+          type: string
+          nullable: true
+        small_repairs_single_limit:
+          type: string
+          nullable: true
+        small_repairs_annual_limit:
+          type: string
+          nullable: true
+        handover_protocol_attached:
+          type: boolean
+        house_rules_attached:
+          type: boolean
+        operating_costs_overview_attached:
+          type: boolean
+        energy_certificate_attached:
+          type: boolean
+        self_disclosure_attached:
+          type: boolean
+        other_attachments:
+          type: string
+          nullable: true
+        individual_agreements:
+          type: string
+          nullable: true
+          description: Weitere individuelle Vereinbarungen, die Vertragsinhalt werden.
         notes:
           type: string
           nullable: true
@@ -4092,6 +4150,64 @@ components:
           type: string
           enum: [draft]
           default: draft
+        lease_subject_description:
+          type: string
+          nullable: true
+        additional_spaces:
+          type: string
+          nullable: true
+        shared_facilities:
+          type: string
+          nullable: true
+        fixed_term_reason:
+          type: string
+          nullable: true
+        handover_due_at:
+          type: string
+          format: date
+          nullable: true
+        operating_costs_allocation_key:
+          type: string
+          nullable: true
+        renovation_condition:
+          type: string
+          nullable: true
+          enum: [renovated, unrenovated, partly_renovated]
+        renovation_condition_notes:
+          type: string
+          nullable: true
+        cosmetic_repairs_agreement:
+          type: string
+          nullable: true
+        small_repairs_single_limit:
+          type: number
+          minimum: 0
+          nullable: true
+        small_repairs_annual_limit:
+          type: number
+          minimum: 0
+          nullable: true
+        handover_protocol_attached:
+          type: boolean
+          default: false
+        house_rules_attached:
+          type: boolean
+          default: false
+        operating_costs_overview_attached:
+          type: boolean
+          default: false
+        energy_certificate_attached:
+          type: boolean
+          default: false
+        self_disclosure_attached:
+          type: boolean
+          default: false
+        other_attachments:
+          type: string
+          nullable: true
+        individual_agreements:
+          type: string
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -4156,6 +4272,59 @@ components:
             `active` -> `active`/`terminated`/`ended`,
             `terminated` -> `terminated`,
             `ended` -> `ended`.
+        lease_subject_description:
+          type: string
+          nullable: true
+        additional_spaces:
+          type: string
+          nullable: true
+        shared_facilities:
+          type: string
+          nullable: true
+        fixed_term_reason:
+          type: string
+          nullable: true
+        handover_due_at:
+          type: string
+          format: date
+          nullable: true
+        operating_costs_allocation_key:
+          type: string
+          nullable: true
+        renovation_condition:
+          type: string
+          nullable: true
+          enum: [renovated, unrenovated, partly_renovated]
+        renovation_condition_notes:
+          type: string
+          nullable: true
+        cosmetic_repairs_agreement:
+          type: string
+          nullable: true
+        small_repairs_single_limit:
+          type: number
+          minimum: 0
+          nullable: true
+        small_repairs_annual_limit:
+          type: number
+          minimum: 0
+          nullable: true
+        handover_protocol_attached:
+          type: boolean
+        house_rules_attached:
+          type: boolean
+        operating_costs_overview_attached:
+          type: boolean
+        energy_certificate_attached:
+          type: boolean
+        self_disclosure_attached:
+          type: boolean
+        other_attachments:
+          type: string
+          nullable: true
+        individual_agreements:
+          type: string
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -4420,23 +4589,23 @@ components:
       properties:
         path:
           type: string
-          example: rental_agreement.notes
+          example: rental_agreement.individual_agreements
         label:
           type: string
-          example: Individuelle Vereinbarungen
+          example: Weitere individuelle Vereinbarungen
         group:
           type: string
           example: Mietvertrag
         type:
           type: string
-          enum: [string, integer, decimal, date, datetime]
+          enum: [string, integer, decimal, date, datetime, boolean]
           example: string
         nullable:
           type: boolean
           example: true
         example:
           type: string
-          example: '{{ rental_agreement.notes }}'
+          example: '{{ rental_agreement.individual_agreements }}'
 
     DocumentFile:
       type: object

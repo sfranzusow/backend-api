@@ -74,6 +74,87 @@ class RentalAgreementApiTest extends TestCase
         ]);
     }
 
+    public function test_rental_agreement_contract_detail_fields_are_persisted_and_visible_to_tenant(): void
+    {
+        $landlord = User::factory()->create();
+        $landlord->assignRole(RoleName::Landlord->value);
+        $tenant = User::factory()->create();
+        $tenant->assignRole(RoleName::Tenant->value);
+        $property = $this->propertyManagedBy($landlord);
+
+        $response = $this->actingAs($landlord, 'sanctum')->postJson('/api/rental-agreements', [
+            'property_id' => $property->id,
+            'landlord_id' => $landlord->id,
+            'tenant_id' => $tenant->id,
+            'date_from' => '2026-01-01',
+            'date_to' => '2027-12-31',
+            'rent_cold' => 900,
+            'lease_subject_description' => 'Wohnung mit Einbaukueche.',
+            'additional_spaces' => 'Kellerraum 12, Stellplatz 4',
+            'shared_facilities' => 'Waschkueche und Fahrradraum',
+            'fixed_term_reason' => 'Geplanter Eigenbedarf ab 2028.',
+            'handover_due_at' => '2025-12-28',
+            'operating_costs_allocation_key' => 'nach Wohnflaeche',
+            'renovation_condition' => RentalAgreement::RENOVATION_CONDITION_PARTLY_RENOVATED,
+            'renovation_condition_notes' => 'Wohnzimmer frisch gestrichen.',
+            'cosmetic_repairs_agreement' => 'Keine starren Fristen.',
+            'small_repairs_single_limit' => 120,
+            'small_repairs_annual_limit' => 300,
+            'handover_protocol_attached' => true,
+            'house_rules_attached' => true,
+            'operating_costs_overview_attached' => true,
+            'energy_certificate_attached' => true,
+            'self_disclosure_attached' => false,
+            'other_attachments' => 'Fotodokumentation',
+            'individual_agreements' => 'Der Garten darf mitbenutzt werden.',
+            'notes' => 'Interne Notiz',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.additional_spaces', 'Kellerraum 12, Stellplatz 4')
+            ->assertJsonPath('data.shared_facilities', 'Waschkueche und Fahrradraum')
+            ->assertJsonPath('data.handover_due_at', '2025-12-28')
+            ->assertJsonPath('data.renovation_condition', RentalAgreement::RENOVATION_CONDITION_PARTLY_RENOVATED)
+            ->assertJsonPath('data.small_repairs_single_limit', '120.00')
+            ->assertJsonPath('data.house_rules_attached', true)
+            ->assertJsonPath('data.individual_agreements', 'Der Garten darf mitbenutzt werden.')
+            ->assertJsonPath('data.notes', 'Interne Notiz');
+
+        $agreementId = $response->json('data.id');
+
+        $this->actingAs($tenant, 'sanctum')
+            ->getJson('/api/rental-agreements/'.$agreementId)
+            ->assertOk()
+            ->assertJsonPath('data.additional_spaces', 'Kellerraum 12, Stellplatz 4')
+            ->assertJsonPath('data.house_rules_attached', true)
+            ->assertJsonPath('data.individual_agreements', 'Der Garten darf mitbenutzt werden.')
+            ->assertJsonMissingPath('data.notes');
+    }
+
+    public function test_rental_agreement_contract_detail_fields_are_validated(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(RoleName::Landlord->value);
+        $property = $this->propertyManagedBy($user);
+        $tenant = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/rental-agreements', [
+            'property_id' => $property->id,
+            'landlord_id' => $user->id,
+            'tenant_id' => $tenant->id,
+            'date_from' => '2026-01-01',
+            'rent_cold' => 900,
+            'renovation_condition' => 'fresh_enough',
+            'small_repairs_single_limit' => -1,
+            'house_rules_attached' => 'maybe',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'renovation_condition',
+                'small_repairs_single_limit',
+                'house_rules_attached',
+            ]);
+    }
+
     public function test_rental_agreement_rejects_foreign_bank_account(): void
     {
         $user = User::factory()->create();

@@ -34,11 +34,12 @@ Der Vermieter vermietet an den Mieter zu Wohnzwecken folgende Wohnung:
 <strong>Objektart:</strong> {{ property.type }}
 
 <strong>Weitere Beschreibung des Mietgegenstands:</strong>
+{{ rental_agreement.lease_subject_description }}
 <strong>Wohnfläche:</strong> {{ property.area_living }} m²
 <strong>Zimmer:</strong> {{ property.rooms }}
 <strong>Etage:</strong> {{ property.floor }}
-<strong>Mitvermietete Nebenräume / Stellplätze / Keller:</strong> ____________________
-<strong>Mitbenutzungsrechte an Gemeinschaftsflächen:</strong> ____________________
+<strong>Mitvermietete Nebenräume / Stellplätze / Keller:</strong> {{ rental_agreement.additional_spaces }}
+<strong>Mitbenutzungsrechte an Gemeinschaftsflächen:</strong> {{ rental_agreement.shared_facilities }}
 
 Die Wohnung wird ausschließlich zu Wohnzwecken überlassen. Eine andere Nutzung,
 insbesondere eine gewerbliche Nutzung, bedarf der vorherigen Zustimmung des
@@ -52,13 +53,13 @@ Es läuft auf unbestimmte Zeit, sofern nachfolgend kein wirksam befristetes
 Mietverhältnis vereinbart ist.
 
 <strong>Vereinbartes Ende / Befristung, falls zutreffend:</strong> {{ rental_agreement.date_to }}
-<strong>Befristungsgrund, falls ein Zeitmietvertrag geschlossen wird:</strong> ____________________
+<strong>Befristungsgrund, falls ein Zeitmietvertrag geschlossen wird:</strong> {{ rental_agreement.fixed_term_reason }}
 
 Bei Wohnraummietverhältnissen ist ein befristeter Mietvertrag nur unter den
 gesetzlichen Voraussetzungen zulässig. Fehlt ein wirksamer Befristungsgrund,
 gelten die gesetzlichen Regelungen.
 
-<strong>Die Übergabe erfolgt spätestens am:</strong> ____________________
+<strong>Die Übergabe erfolgt spätestens am:</strong> {{ rental_agreement.handover_due_at }}
 Die Parteien erstellen bei Übergabe ein Übergabeprotokoll. Darin werden Zustand,
 Zählerstände, übergebene Schlüssel, bekannte Mängel und mitüberlassene
 Einrichtungen dokumentiert. Das Übergabeprotokoll wird Bestandteil dieses
@@ -97,7 +98,7 @@ die gesetzlichen Vorgaben. Die Parteien können im Rahmen des gesetzlich
 Zulässigen einen angemessenen Umlageschlüssel vereinbaren.
 
 <strong>Umlageschlüssel, falls nicht gesetzlich vorgegeben:</strong>
-____________________
+{{ rental_agreement.operating_costs_allocation_key }}
 
 <h2>4. Mietsicherheit / Kaution</h2>
 
@@ -144,12 +145,11 @@ Zustand der Wohnung erforderlich sind. Starre Fristen gelten nicht.
 Die Parteien können folgenden individuellen Zustand bei Übergabe festhalten:
 
 <strong>Die Wohnung wird übergeben als:</strong>
-[ ] renoviert
-[ ] unrenoviert
-[ ] teilweise renoviert, nämlich: ____________________
+{{ rental_agreement.renovation_condition }}
+{{ rental_agreement.renovation_condition_notes }}
 
 <strong>Besondere individuelle Vereinbarung zu Schönheitsreparaturen:</strong>
-____________________
+{{ rental_agreement.cosmetic_repairs_agreement }}
 
 <h2>7. Kleinreparaturen</h2>
 
@@ -157,8 +157,8 @@ Soweit rechtlich zulässig, trägt der Mieter die Kosten kleiner
 Instandsetzungen an Teilen der Mietsache, die seinem häufigen und direkten
 Zugriff unterliegen, nur bis zu folgenden Grenzen:
 
-<strong>Höchstbetrag je Einzelfall:</strong> ____________________ EUR
-<strong>Höchstbetrag pro Kalenderjahr:</strong> ____________________ EUR
+<strong>Höchstbetrag je Einzelfall:</strong> {{ rental_agreement.small_repairs_single_limit }} EUR
+<strong>Höchstbetrag pro Kalenderjahr:</strong> {{ rental_agreement.small_repairs_annual_limit }} EUR
 
 Eine Zahlungspflicht besteht nur, wenn die Klausel im konkreten Einzelfall
 wirksam ist. Reparaturen werden vom Vermieter beauftragt, sofern die Parteien
@@ -265,10 +265,7 @@ vorgeschrieben ist.
 Folgende individuelle Vereinbarungen gehen vor, soweit sie wirksam und eindeutig
 zwischen den Parteien getroffen wurden:
 
-{{ rental_agreement.notes }}
-
-<strong>Weitere individuelle Vereinbarungen:</strong>
-____________________
+{{ rental_agreement.individual_agreements }}
 
 <h2>18. Schlussbestimmungen</h2>
 
@@ -284,12 +281,12 @@ unwirksamen Bestimmung tritt die gesetzliche Regelung.
 
 Folgende Anlagen sind Bestandteil dieses Vertrags, soweit beigefügt:
 
-[ ] Übergabeprotokoll
-[ ] Hausordnung
-[ ] Betriebskostenübersicht
-[ ] Energieausweis / Energieinformationen
-[ ] Selbstauskunft / besondere Vereinbarungen
-[ ] Sonstige Anlagen: ____________________
+[ ] Übergabeprotokoll: {{ rental_agreement.handover_protocol_attached }}
+[ ] Hausordnung: {{ rental_agreement.house_rules_attached }}
+[ ] Betriebskostenübersicht: {{ rental_agreement.operating_costs_overview_attached }}
+[ ] Energieausweis / Energieinformationen: {{ rental_agreement.energy_certificate_attached }}
+[ ] Selbstauskunft / besondere Vereinbarungen: {{ rental_agreement.self_disclosure_attached }}
+[ ] Sonstige Anlagen: {{ rental_agreement.other_attachments }}
 
 <h2>20. Unterschriften</h2>
 

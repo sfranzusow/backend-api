@@ -264,7 +264,7 @@ Das Frontend kann die erlaubten Platzhalter pro Dokumenttyp ueber
 `GET /document-template-placeholders?document_type=rental_agreement_contract`
 abrufen. Die Antwort liefert neben dem technischen Pfad auch Label, Gruppe,
 Typ, Nullable-Information und ein einfuegbares Beispiel wie
-`{{ rental_agreement.notes }}`. Damit bleibt das Backend die Quelle der
+`{{ rental_agreement.individual_agreements }}`. Damit bleibt das Backend die Quelle der
 Wahrheit fuer Template-Editor, Autocomplete und serverseitige Validierung.
 
 Das Frontend sollte Vorlagen spaeter nicht als beliebige Datei behandeln,
@@ -293,10 +293,14 @@ Daraus ergeben sich klare Datenluecken und naechste Schritte:
 - Die Placeholder-Liste und Snapshot-Erzeugung enthalten Bankdaten, z. B.
   `bank_account.account_holder`, `bank_account.iban`, `bank_account.bic` und
   `bank_account.bank_name`.
-- Objekt- und Vertragsdaten reichen fuer einen realen Vertrag noch nicht ganz:
-  Wohnflaeche, Zimmer, Etage, mitvermietete Raeume/Stellplaetze,
-  Uebergabeprotokoll, Schluessel, Zaehlerstaende, Anlagen, Hausordnung,
-  Energieausweis und individuelle Klauseln sollten fachlich eingeordnet werden.
+- Objekt- und Vertragsdaten sind fuer den ersten echten Vertragsentwurf weiter
+  ausgebaut: mitvermietete Raeume/Stellplaetze, Mitbenutzungsrechte,
+  Befristungsgrund, spaetester Uebergabetermin, Umlageschluessel,
+  Renovierungszustand, Kleinreparaturgrenzen, Anlagen und individuelle
+  Vereinbarungen sind strukturiert am Mietvertrag vorhanden und werden in den
+  Dokument-Snapshot uebernommen. Noch nicht detailliert modelliert sind
+  Schluessel, Zaehlerstaende, einzelne Uebergabeprotokollpositionen und
+  Energieausweis-Metadaten.
 - Die aktuelle einfache PDF-Erzeugung reicht fuer die technische Pipeline, aber
   nicht fuer echte mehrseitige Vertragsdokumente. Fuer produktive
   Mietvertraege braucht das Documents-Modul einen robusten mehrseitigen
@@ -538,7 +542,8 @@ Naechste sinnvolle Backend-Schritte:
 1. Such- und Listenfilter fuer operative Frontend-Ansichten ausbauen:
    Mietvertraege nach Mietername oder Objektadresse, Objekte nach Adresse,
    sowie Zahlungen global und nach `paid_at` filtern.
-2. Weitere Placeholder und Snapshot-Daten fuer echte Vertragsvorlagen erweitern.
+2. Schluessel, Zaehlerstaende, konkrete Uebergabeprotokollpositionen,
+   Energieausweis-Metadaten und detaillierte Anlagen fachlich modellieren.
 3. PDF-Renderer spaeter durch eine robuste Library oder einen dedizierten Service ersetzen.
 4. Faellige Reminder spaeter per Command/Job automatisch melden.
 
@@ -745,7 +750,35 @@ Noch offen:
 - Produktentscheidung, ob beim Anlegen eines Mietvertrags automatisch ein
   Default-Konto vorausgewaehlt oder nur frontendseitig vorgeschlagen wird
 
-### Paket 10: Suche und operative Listenfilter
+### Paket 10: Vertragsdetails und echte Placeholder
+
+Ziel: Die echte Wohnraummietvertragsvorlage soll nicht mit Leerzeilen arbeiten,
+wenn fachliche Daten strukturiert im Backend gepflegt werden koennen.
+
+Umgesetzt:
+
+- optionale Felder am Mietvertrag fuer `lease_subject_description`,
+  `additional_spaces`, `shared_facilities`, `fixed_term_reason`,
+  `handover_due_at`, `operating_costs_allocation_key`,
+  `renovation_condition`, `renovation_condition_notes`,
+  `cosmetic_repairs_agreement`, Kleinreparaturgrenzen,
+  Anlagen-Flags, `other_attachments` und `individual_agreements`
+- `notes` bleibt interne Verwaltungsnotiz; `individual_agreements` ist fuer
+  Vertragsinhalt und Dokument-Snapshot gedacht
+- Store-/Update-Validierung, API-Response, Snapshot-Erzeugung und
+  Placeholder-Whitelist erweitert
+- Boolean-Placeholder werden im einfachen Renderer als `ja` oder `nein`
+  ausgegeben
+- `docs/templates/wohnraummietvertrag-template.de.txt` nutzt die neuen
+  Placeholder an den bisherigen Leerstellen
+
+Noch offen:
+
+- Schluessel, Zaehlerstaende und konkrete Uebergabeprotokollpositionen
+- Energieausweis-Metadaten statt nur Anlagen-Flag
+- Anlagen spaeter als eigene Dokument-/Dateiverweise statt nur Text und Flags
+
+### Paket 11: Suche und operative Listenfilter
 
 Ziel: Frontend-Ansichten sollen nicht nur ueber bekannte IDs navigieren,
 sondern typische Arbeitsfragen direkt beantworten koennen: "Welcher
